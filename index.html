@@ -74,22 +74,16 @@
     let walkSpeed = 3;
     let walkTimer = null;
     let currentX, currentY;
-    let screenWidth, screenHeight;
+    let workArea = { x: 0, y: 0, width: 0, height: 0 };
 
-    // 画面サイズを取得
-    function updateScreenSize() {
-      window.electronAPI.getScreenSize().then(size => {
-        screenWidth = size.width;
-        screenHeight = size.height;
-      });
+    // 作業領域を取得
+    async function updateWorkArea() {
+      workArea = await window.electronAPI.getWorkArea();
+      return workArea;
     }
 
     // 初期化
-    updateScreenSize();
-    window.electronAPI.getWindowPosition().then(pos => {
-      currentX = pos.x;
-      currentY = pos.y;
-    });
+    updateWorkArea();
 
     // 画像を切り替え
     function updateImage() {
@@ -106,18 +100,26 @@
     function startAutoWalk() {
       if (mode !== 'running') return;
 
+      // 最前面設定
+      window.electronAPI.setAlwaysOnTop(true);
+
       walkTimer = setInterval(() => {
         if (isDragging || mode !== 'running') return;
 
-        const bottomY = screenHeight - 120;
+        // タスクバーのすぐ上（作業領域の下端）
+        const bottomY = workArea.y + workArea.height - 110;
         currentX += walkSpeed * walkDirection;
 
-        if (currentX >= screenWidth - 130) {
-          currentX = screenWidth - 130;
+        // 横方向の境界（作業領域内）
+        const maxX = workArea.x + workArea.width - 130;
+        const minX = workArea.x + 10;
+
+        if (currentX >= maxX) {
+          currentX = maxX;
           walkDirection = -1;
           mascot.classList.remove('flip');
-        } else if (currentX <= 10) {
-          currentX = 10;
+        } else if (currentX <= minX) {
+          currentX = minX;
           walkDirection = 1;
           mascot.classList.add('flip');
         }
@@ -176,7 +178,7 @@
         mode = mode === 'running' ? 'idle' : 'running';
         updateImage();
         if (mode === 'running') {
-          updateScreenSize();
+          updateWorkArea();
           startAutoWalk();
         } else {
           clearInterval(walkTimer);
@@ -195,7 +197,7 @@
       mode = newMode;
       updateImage();
       if (mode === 'running') {
-        updateScreenSize();
+        updateWorkArea();
         startAutoWalk();
       } else {
         clearInterval(walkTimer);
@@ -208,13 +210,13 @@
     });
 
     // 起動時に自動走行開始
-    setTimeout(() => {
-      updateScreenSize();
-      window.electronAPI.getWindowPosition().then(pos => {
-        currentX = pos.x;
-        currentY = pos.y;
-        startAutoWalk();
-      });
+    setTimeout(async () => {
+      await updateWorkArea();
+      const pos = await window.electronAPI.getWindowPosition();
+      currentX = pos.x;
+      currentY = pos.y;
+      console.log('workArea:', workArea);  // デバッグ
+      startAutoWalk();
     }, 500);
   </script>
 </body>

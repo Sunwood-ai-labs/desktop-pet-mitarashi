@@ -6,7 +6,9 @@ let mainWindow;
 let tray = null;
 
 function createWindow() {
-  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  const workArea = screen.getPrimaryDisplay().workArea;
+  // workArea: {x, y, width, height} - タスクバーを除いた作業領域
+  // 作業領域の下端 = workArea.y + workArea.height
 
   mainWindow = new BrowserWindow({
     width: 130,
@@ -24,7 +26,8 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
-  mainWindow.setPosition(10, height - 120);
+  // タスクバーのすぐ上に配置（作業領域の下端からウィンドウ高さを引く）
+  mainWindow.setPosition(workArea.x + 10, workArea.y + workArea.height - 110);
 
   // ウィンドウを閉じる際、トレイに最小化（終了しない）
   mainWindow.on('close', (event) => {
@@ -141,8 +144,13 @@ ipcMain.handle('get-window-position', () => {
   return { x, y };
 });
 
-// 画面サイズ取得用
-ipcMain.handle('get-screen-size', () => {
-  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-  return { width, height };
+// 作業領域取得用（タスクバーを除いた領域）
+ipcMain.handle('get-work-area', () => {
+  const workArea = screen.getPrimaryDisplay().workArea;
+  return workArea;  // {x, y, width, height}
+});
+
+// 最前面設定
+ipcMain.on('set-always-on-top', (event, value) => {
+  mainWindow.setAlwaysOnTop(value, 'floating');
 });
