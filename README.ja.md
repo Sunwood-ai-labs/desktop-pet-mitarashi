@@ -69,6 +69,23 @@ GitHub Actionsによる自動ビルドとリリース
 - **タグプッシュ時 (v*)**: 全プラットフォーム用にビルドし、GitHub Releaseを作成
 - **手動実行**: リリースを作成せずにビルドのみ実行
 
+## 開発用スクリプト
+
+### リリースヘッダー生成
+
+GitHubリリース用のヘッダー画像を生成します：
+
+```bash
+uv run python scripts/generate_release_header.py --version 0.1.0 --output assets/release-header-v0.1.0.svg
+```
+
+**オプション:**
+- `--version`: バージョン文字列（例: `0.1.0`）
+- `--output`: 出力ファイルパス
+- `--source`: 元SVGファイル（デフォルト: `assets/mitarashi_minimal.svg`）
+
+このスクリプトは`mitarashi_minimal.svg`から猫キャラクターを抽出し、Inkscapeメタデータを削除して、プロジェクトのブランドカラーでスタイリングしたヘッダー画像を生成します。
+
 ## ライセンス
 
 MIT License - [LICENSE](LICENSE) をご覧ください。

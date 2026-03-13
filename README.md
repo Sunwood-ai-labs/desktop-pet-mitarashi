@@ -77,6 +77,23 @@ This project uses GitHub Actions for automated builds and releases.
 - **On tag push (v*)**: Builds for all platforms and creates a GitHub Release
 - **Manual dispatch**: Build artifacts without creating a release
 
+## Development Scripts
+
+### Release Header Generator
+
+Generate a release header image for GitHub releases:
+
+```bash
+uv run python scripts/generate_release_header.py --version 0.1.0 --output assets/release-header-v0.1.0.svg
+```
+
+**Options:**
+- `--version`: Version string (e.g., `0.1.0`)
+- `--output`: Output file path
+- `--source`: Source SVG file (default: `assets/mitarashi_minimal.svg`)
+
+The script extracts the cat character from `mitarashi_minimal.svg`, cleans Inkscape metadata, and generates a styled header image with the project branding.
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
