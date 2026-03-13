@@ -10,4 +10,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // トレイからのメッセージ受信
   onSetMode: (callback) => ipcRenderer.on('set-mode', (event, mode) => callback(mode)),
   onSetSpeed: (callback) => ipcRenderer.on('set-speed', (event, speed) => callback(speed)),
+  onSetBackgroundOpacity: (callback) => ipcRenderer.on('set-background-opacity', (event, opacity) => callback(opacity)),
 });

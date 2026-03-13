@@ -3,7 +3,9 @@ const path = require('path');
 const sharp = require('sharp');
 
 let mainWindow;
+let backgroundWindow = null;
 let tray = null;
+let isBackgroundVisible = false;
 
 function createWindow() {
   const workArea = screen.getPrimaryDisplay().workArea;
@@ -38,6 +40,43 @@ function createWindow() {
   });
 }
 
+function createBackgroundWindow() {
+  const workArea = screen.getPrimaryDisplay().workArea;
+  // 画像アスペクト比: 1360x436 → 約3.12:1
+  const imageAspectRatio = 1360 / 436;
+  const windowHeight = Math.round(workArea.width / imageAspectRatio);
+
+  backgroundWindow = new BrowserWindow({
+    width: workArea.width,
+    height: windowHeight,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: false,
+    resizable: false,
+    skipTaskbar: true,
+    focusable: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  backgroundWindow.loadFile('background.html');
+  // タスクバーのすぐ上に配置
+  backgroundWindow.setPosition(workArea.x, workArea.y + workArea.height - windowHeight);
+
+  // クリックを透過
+  backgroundWindow.setIgnoreMouseEvents(true);
+
+  // 初期状態は非表示
+  backgroundWindow.hide();
+
+  backgroundWindow.on('closed', () => {
+    backgroundWindow = null;
+  });
+}
+
 async function createTray() {
   const iconPath = path.join(__dirname, 'assets', 'fav.svg');
 
@@ -51,58 +90,8 @@ async function createTray() {
   tray = new Tray(trayIcon);
   tray.setToolTip('みたらし - Desktop Pet');
 
-  const contextMenu = Menu.buildFromTemplate([
-    {
-      label: '表示',
-      click: () => {
-        mainWindow.show();
-        mainWindow.focus();
-      }
-    },
-    {
-      label: '走行モード',
-      click: () => {
-        mainWindow.webContents.send('set-mode', 'running');
-        mainWindow.show();
-      }
-    },
-    {
-      label: '待機モード',
-      click: () => {
-        mainWindow.webContents.send('set-mode', 'idle');
-        mainWindow.show();
-      }
-    },
-    { type: 'separator' },
-    {
-      label: '速度: 速い',
-      click: () => {
-        mainWindow.webContents.send('set-speed', 8);
-      }
-    },
-    {
-      label: '速度: 普通',
-      click: () => {
-        mainWindow.webContents.send('set-speed', 5);
-      }
-    },
-    {
-      label: '速度: 遅い',
-      click: () => {
-        mainWindow.webContents.send('set-speed', 2);
-      }
-    },
-    { type: 'separator' },
-    {
-      label: '終了',
-      click: () => {
-        app.isQuitting = true;
-        app.quit();
-      }
-    }
-  ]);
-
-  tray.setContextMenu(contextMenu);
+  // 初期メニューを設定
+  updateTrayMenu();
 
   // ダブルクリックでウィンドウ表示
   tray.on('double-click', () => {
@@ -154,3 +143,86 @@ ipcMain.handle('get-work-area', () => {
 ipcMain.on('set-always-on-top', (event, value) => {
   mainWindow.setAlwaysOnTop(value, 'floating');
 });
+
+// 背景ウィンドウの表示/非表示
+function toggleBackground() {
+  if (!backgroundWindow) {
+    createBackgroundWindow();
+  }
+
+  isBackgroundVisible = !isBackgroundVisible;
+
+  if (isBackgroundVisible) {
+    backgroundWindow.show();
+  } else {
+    backgroundWindow.hide();
+  }
+
+  // メニューを更新
+  updateTrayMenu();
+}
+
+// トレイメニューを更新
+function updateTrayMenu() {
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '表示',
+      click: () => {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    },
+    {
+      label: '走行モード',
+      click: () => {
+        mainWindow.webContents.send('set-mode', 'running');
+        mainWindow.show();
+      }
+    },
+    {
+      label: '待機モード',
+      click: () => {
+        mainWindow.webContents.send('set-mode', 'idle');
+        mainWindow.show();
+      }
+    },
+    { type: 'separator' },
+    {
+      label: '速度: 速い',
+      click: () => {
+        mainWindow.webContents.send('set-speed', 8);
+      }
+    },
+    {
+      label: '速度: 普通',
+      click: () => {
+        mainWindow.webContents.send('set-speed', 5);
+      }
+    },
+    {
+      label: '速度: 遅い',
+      click: () => {
+        mainWindow.webContents.send('set-speed', 2);
+      }
+    },
+    { type: 'separator' },
+    {
+      label: '背景表示',
+      type: 'checkbox',
+      checked: isBackgroundVisible,
+      click: () => {
+        toggleBackground();
+      }
+    },
+    { type: 'separator' },
+    {
+      label: '終了',
+      click: () => {
+        app.isQuitting = true;
+        app.quit();
+      }
+    }
+  ]);
+
+  tray.setContextMenu(contextMenu);
+}
