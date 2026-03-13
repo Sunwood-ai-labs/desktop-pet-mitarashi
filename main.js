@@ -6,6 +6,7 @@ let mainWindow;
 let backgroundWindow = null;
 let tray = null;
 let isBackgroundVisible = false;
+let currentMode = 'running';
 
 function createWindow() {
   const workArea = screen.getPrimaryDisplay().workArea;
@@ -172,17 +173,34 @@ function updateTrayMenu() {
         mainWindow.focus();
       }
     },
+    { type: 'separator' },
     {
       label: '走行モード',
+      type: 'radio',
+      checked: currentMode === 'running',
       click: () => {
+        currentMode = 'running';
         mainWindow.webContents.send('set-mode', 'running');
         mainWindow.show();
       }
     },
     {
       label: '待機モード',
+      type: 'radio',
+      checked: currentMode === 'idle',
       click: () => {
+        currentMode = 'idle';
         mainWindow.webContents.send('set-mode', 'idle');
+        mainWindow.show();
+      }
+    },
+    {
+      label: 'ランダムモード',
+      type: 'radio',
+      checked: currentMode === 'random',
+      click: () => {
+        currentMode = 'random';
+        mainWindow.webContents.send('set-mode', 'random');
         mainWindow.show();
       }
     },

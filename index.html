@@ -64,8 +64,11 @@
     const container = document.getElementById('container');
     const mascot = document.getElementById('mascot');
 
-    // モード: 'running' または 'idle'
+    // モード: 'running', 'idle', または 'random'
     let mode = 'running';
+    // ランダムモード時の実際のモード
+    let effectiveMode = 'running';
+    let randomTimer = null;
     let isDragging = false;
     let lastX, lastY;
     let mouseDownX, mouseDownY; // For click detection
@@ -87,7 +90,9 @@
 
     // 画像を切り替え
     function updateImage() {
-      if (mode === 'running') {
+      // ランダムモード時は effectiveMode を使用
+      const currentMode = mode === 'random' ? effectiveMode : mode;
+      if (currentMode === 'running') {
         mascot.src = 'assets/running_cat.webp';
         mascot.classList.remove('idle');
       } else {
@@ -96,15 +101,72 @@
       }
     }
 
+    // ランダムモードに入る
+    function enterRandomMode() {
+      effectiveMode = 'running';
+      scheduleNextSwitch();
+      updateImage();
+      startAutoWalk();
+    }
+
+    // ランダムモードから出る
+    function exitRandomMode() {
+      if (randomTimer) {
+        clearTimeout(randomTimer);
+        randomTimer = null;
+      }
+      // effectiveModeを現在のmodeにリセット
+      effectiveMode = mode;
+    }
+
+    // 次のモード切り替えをスケジュール
+    function scheduleNextSwitch() {
+      if (mode !== 'random') return;
+
+      // 現在の effectiveMode に応じた時間を設定
+      const delay = effectiveMode === 'running'
+        ? (Math.random() * 7000 + 3000)  // 走行: 3〜10秒
+        : (Math.random() * 3000 + 2000); // 待機: 2〜5秒
+
+      randomTimer = setTimeout(() => {
+        // モードを切り替え
+        effectiveMode = effectiveMode === 'running' ? 'idle' : 'running';
+
+        if (effectiveMode === 'running') {
+          updateImage();
+          startAutoWalk();
+        } else {
+          clearInterval(walkTimer);
+          updateImage();
+        }
+
+        // 次の切り替えをスケジュール
+        scheduleNextSwitch();
+      }, delay);
+    }
+
     // 自動走行
     function startAutoWalk() {
-      if (mode !== 'running') return;
+      // ランダムモード時は effectiveMode をチェック
+      const shouldRun = mode === 'random' ? effectiveMode === 'running' : mode === 'running';
+      if (!shouldRun) {
+        // 走行しない場合は既存のタイマーをクリア
+        clearInterval(walkTimer);
+        walkTimer = null;
+        return;
+      }
+
+      // 既存のタイマーがあればクリア（重複防止）
+      if (walkTimer) {
+        clearInterval(walkTimer);
+      }
 
       // 最前面設定
       window.electronAPI.setAlwaysOnTop(true);
 
       walkTimer = setInterval(() => {
-        if (isDragging || mode !== 'running') return;
+        const shouldRun = mode === 'random' ? effectiveMode === 'running' : mode === 'running';
+        if (isDragging || !shouldRun) return;
 
         // タスクバーのすぐ上（作業領域の下端）
         const bottomY = workArea.y + workArea.height - 110;
@@ -165,7 +227,8 @@
           currentX = pos.x;
           currentY = pos.y;
         });
-        if (mode === 'running') {
+        const shouldRun = mode === 'random' ? effectiveMode === 'running' : mode === 'running';
+        if (shouldRun) {
           startAutoWalk();
         }
       }
@@ -175,6 +238,8 @@
     container.addEventListener('click', () => {
       // Only toggle mode if mouse hasn't moved significantly (not a drag)
       if (!hasMoved) {
+        // ランダムモード時はクリックでは切り替えない
+        if (mode === 'random') return;
         mode = mode === 'running' ? 'idle' : 'running';
         updateImage();
         if (mode === 'running') {
@@ -194,6 +259,17 @@
 
     // トレイからのモード変更
     window.electronAPI.onSetMode((newMode) => {
+      // ランダムモードから出る場合
+      if (mode === 'random' && newMode !== 'random') {
+        exitRandomMode();
+      }
+      // ランダムモードに入る場合
+      if (newMode === 'random') {
+        mode = 'random';
+        enterRandomMode();
+        return;
+      }
+
       mode = newMode;
       updateImage();
       if (mode === 'running') {
