@@ -1,11 +1,28 @@
 #!/usr/bin/env python3
 """
 Release header image generator for Desktop Pet Mitarashi
-Usage: python scripts/generate_release_header.py --version 0.1.0 --output assets/release-header-v0.1.0.svg
+Usage: uv run python scripts/generate_release_header.py --version 0.1.0 --output assets/release-header-v0.1.0.svg
 """
 
 import argparse
+import re
 from pathlib import Path
+
+
+def extract_graphical_content(svg_content: str) -> str:
+    """Extract only graphical elements (paths, groups) from SVG, excluding metadata."""
+    # Find all <g> elements with their content (the actual drawing)
+    # Match <g ...> ... </g> patterns
+    pattern = r'<g\s+[^>]*inkscape:label="Layer 1"[^>]*>(.*?)</g>'
+    matches = re.findall(pattern, svg_content, re.DOTALL)
+
+    if matches:
+        # Return the main layer content
+        return matches[0]
+
+    # Fallback: extract all path elements
+    paths = re.findall(r'<path[^>]*/>', svg_content)
+    return '\n'.join(paths)
 
 
 def generate_release_header(version: str, output_path: str, source_svg: str = "assets/mitarashi_minimal.svg"):
@@ -14,18 +31,12 @@ def generate_release_header(version: str, output_path: str, source_svg: str = "a
     # Read the source SVG
     source_path = Path(source_svg)
     if not source_path.exists():
-        raise FileNotFoundError(f"Source SVG not found: {source_svg}")
+        raise FileNotFoundError(f"Source SVG not found: {source_path}")
 
     source_content = source_path.read_text(encoding="utf-8")
 
-    # Extract the inner content (everything between <svg> and </svg>)
-    # Find the start of inner content after the opening <svg> tag
-    svg_start = source_content.find("<svg")
-    svg_tag_end = source_content.find(">", svg_start) + 1
-    svg_end = source_content.rfind("</svg>")
-
-    # Get the inner content
-    inner_content = source_content[svg_tag_end:svg_end]
+    # Extract only the graphical content (paths)
+    graphical_content = extract_graphical_content(source_content)
 
     # Create new SVG with centered cat and text
     new_svg = f'''<?xml version="1.0" encoding="UTF-8" standalone="no"?>
@@ -55,9 +66,9 @@ def generate_release_header(version: str, output_path: str, source_svg: str = "a
   <circle cx="100" cy="100" r="150" fill="#D98943" opacity="0.1"/>
   <circle cx="1180" cy="540" r="200" fill="#D98471" opacity="0.1"/>
 
-  <!-- Centered cat character (original SVG scaled and centered) -->
-  <g transform="translate(90, 150) scale(1.0)">
-    {inner_content}
+  <!-- Centered cat character -->
+  <g transform="translate(90, 150)">
+    {graphical_content}
   </g>
 
   <!-- Title section on the right -->
