@@ -30,7 +30,8 @@
       "!screenshot*.png"
     ],
     "win": {
-      "target": "nsis"
+      "target": "portable",
+      "forceCodeSigning": false
     },
     "mac": {
       "target": "dmg"
