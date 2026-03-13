@@ -152,6 +152,48 @@ def generate_release_header(version: str, output_path: str, source_svg: str = "a
     output.write_text(new_svg, encoding="utf-8")
     print(f"Generated: {output_path}")
 
+    # Validate the generated SVG
+    validate_svg(output_path)
+
+
+def validate_svg(svg_path: str) -> bool:
+    """Validate the generated SVG file."""
+    path = Path(svg_path)
+    content = path.read_text(encoding="utf-8")
+
+    # Check 1: Valid XML
+    try:
+        tree = ET.parse(path)
+        root = tree.getroot()
+        print(f"  [OK] Valid XML - Root: {root.tag.split('}')[-1] if '}' in root.tag else root.tag}")
+    except ET.ParseError as e:
+        print(f"  [ERROR] Invalid XML: {e}")
+        return False
+
+    # Check 2: No sodipodi namespace
+    sodipodi_count = content.count('sodipodi')
+    if sodipodi_count > 0:
+        print(f"  [ERROR] Contains {sodipodi_count} sodipodi references")
+        return False
+    print("  [OK] No sodipodi namespace")
+
+    # Check 3: No inkscape namespace
+    inkscape_count = content.count('inkscape')
+    if inkscape_count > 0:
+        print(f"  [ERROR] Contains {inkscape_count} inkscape references")
+        return False
+    print("  [OK] No inkscape namespace")
+
+    # Check 4: Required elements
+    ns = {'svg': 'http://www.w3.org/2000/svg'}
+    root = tree.getroot()
+    paths = len(root.findall('.//svg:path', ns))
+    texts = len(root.findall('.//svg:text', ns))
+    print(f"  [OK] Elements: path={paths}, text={texts}")
+
+    print(f"Validation passed: {svg_path}")
+    return True
+
 
 def main():
     parser = argparse.ArgumentParser(description="Generate release header image")
