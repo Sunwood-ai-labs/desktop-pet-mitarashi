@@ -1,7 +1,9 @@
-const { app, BrowserWindow, ipcMain, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
+const sharp = require('sharp');
 
 let mainWindow;
+let tray = null;
 
 function createWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
@@ -23,9 +25,91 @@ function createWindow() {
 
   mainWindow.loadFile('index.html');
   mainWindow.setPosition(10, height - 120);
+
+  // ウィンドウを閉じる際、トレイに最小化（終了しない）
+  mainWindow.on('close', (event) => {
+    if (!app.isQuitting) {
+      event.preventDefault();
+      mainWindow.hide();
+    }
+  });
 }
 
-app.whenReady().then(() => {
+async function createTray() {
+  const iconPath = path.join(__dirname, 'assets', 'fav.svg');
+
+  // SVGをPNGに変換してトレイアイコンに設定
+  const iconBuffer = await sharp(iconPath)
+    .resize(16, 16, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toBuffer();
+
+  const trayIcon = nativeImage.createFromBuffer(iconBuffer);
+  tray = new Tray(trayIcon);
+  tray.setToolTip('みたらし - Desktop Pet');
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '表示',
+      click: () => {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    },
+    {
+      label: '走行モード',
+      click: () => {
+        mainWindow.webContents.send('set-mode', 'running');
+        mainWindow.show();
+      }
+    },
+    {
+      label: '待機モード',
+      click: () => {
+        mainWindow.webContents.send('set-mode', 'idle');
+        mainWindow.show();
+      }
+    },
+    { type: 'separator' },
+    {
+      label: '速度: 速い',
+      click: () => {
+        mainWindow.webContents.send('set-speed', 8);
+      }
+    },
+    {
+      label: '速度: 普通',
+      click: () => {
+        mainWindow.webContents.send('set-speed', 5);
+      }
+    },
+    {
+      label: '速度: 遅い',
+      click: () => {
+        mainWindow.webContents.send('set-speed', 2);
+      }
+    },
+    { type: 'separator' },
+    {
+      label: '終了',
+      click: () => {
+        app.isQuitting = true;
+        app.quit();
+      }
+    }
+  ]);
+
+  tray.setContextMenu(contextMenu);
+
+  // ダブルクリックでウィンドウ表示
+  tray.on('double-click', () => {
+    mainWindow.show();
+    mainWindow.focus();
+  });
+}
+
+app.whenReady().then(async () => {
+  await createTray();
   createWindow();
 
   app.on('activate', () => {
@@ -35,10 +119,9 @@ app.whenReady().then(() => {
   });
 });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+// トレイ常駐アプリのため、ウィンドウが閉じても終了しない
+app.on('window-all-closed', (event) => {
+  event.preventDefault();
 });
 
 // ドラッグ移動用

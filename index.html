@@ -190,6 +190,23 @@
       walkSpeed = walkSpeed >= 8 ? 2 : walkSpeed + 2;
     });
 
+    // トレイからのモード変更
+    window.electronAPI.onSetMode((newMode) => {
+      mode = newMode;
+      updateImage();
+      if (mode === 'running') {
+        updateScreenSize();
+        startAutoWalk();
+      } else {
+        clearInterval(walkTimer);
+      }
+    });
+
+    // トレイからの速度変更
+    window.electronAPI.onSetSpeed((newSpeed) => {
+      walkSpeed = newSpeed;
+    });
+
     // 起動時に自動走行開始
     setTimeout(() => {
       updateScreenSize();

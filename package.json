@@ -10,12 +10,18 @@
     "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux"
   },
-  "keywords": ["desktop-pet", "electron", "mascot", "cat"],
+  "keywords": [
+    "desktop-pet",
+    "electron",
+    "mascot",
+    "cat"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
     "electron": "^41.0.2",
-    "electron-builder": "^26.8.1"
+    "electron-builder": "^26.8.1",
+    "sharp": "^0.34.5"
   },
   "build": {
     "appId": "com.mitarashi.desktop-pet",
