@@ -7,22 +7,58 @@ Usage: uv run python scripts/generate_release_header.py --version 0.1.0 --output
 import argparse
 import re
 from pathlib import Path
+import xml.etree.ElementTree as ET
 
 
 def extract_graphical_content(svg_content: str) -> str:
-    """Extract only graphical elements (paths, groups) from SVG, excluding metadata."""
-    # Find all <g> elements with their content (the actual drawing)
-    # Match <g ...> ... </g> patterns
-    pattern = r'<g\s+[^>]*inkscape:label="Layer 1"[^>]*>(.*?)</g>'
-    matches = re.findall(pattern, svg_content, re.DOTALL)
+    """Extract only graphical elements from Layer 1, cleaning namespace attributes."""
+    # Remove namespace declarations that cause parsing issues
+    clean_content = svg_content
+    # Register namespaces to avoid ns0 prefixes
+    ET.register_namespace('', 'http://www.w3.org/2000/svg')
+    ET.register_namespace('xlink', 'http://www.w3.org/1999/xlink')
 
-    if matches:
-        # Return the main layer content
-        return matches[0]
+    try:
+        root = ET.fromstring(svg_content.encode('utf-8'))
 
-    # Fallback: extract all path elements
-    paths = re.findall(r'<path[^>]*/>', svg_content)
-    return '\n'.join(paths)
+        # Find Layer 1 group
+        for g in root.iter('{http://www.w3.org/2000/svg}g'):
+            label = g.get('{http://www.inkscape.org/namespaces/inkscape}label', '')
+            if label == 'Layer 1':
+                # Remove inkscape and sodipodi attributes from this element
+                for attr in list(g.attrib.keys()):
+                    if 'inkscape' in attr or 'sodipodi' in attr:
+                        del g.attrib[attr]
+
+                # Recursively clean all child elements
+                clean_element(g)
+
+                # Convert back to string
+                return ET.tostring(g, encoding='unicode')
+
+        # Fallback: no Layer 1 found, extract all paths
+        paths = []
+        for path in root.iter('{http://www.w3.org/2000/svg}path'):
+            clean_element(path)
+            paths.append(ET.tostring(path, encoding='unicode'))
+        return '\n'.join(paths)
+
+    except ET.ParseError:
+        # Fallback to regex if XML parsing fails
+        paths = re.findall(r'<path[^>]*/>', svg_content)
+        content = '\n'.join(paths)
+        content = re.sub(r'\s+inkscape:[a-zA-Z]+="[^"]*"', '', content)
+        content = re.sub(r'\s+sodipodi:[a-zA-Z]+="[^"]*"', '', content)
+        return content
+
+
+def clean_element(elem):
+    """Remove inkscape and sodipodi attributes from element and its children."""
+    for attr in list(elem.attrib.keys()):
+        if 'inkscape' in attr or 'sodipodi' in attr:
+            del elem.attrib[attr]
+    for child in elem:
+        clean_element(child)
 
 
 def generate_release_header(version: str, output_path: str, source_svg: str = "assets/mitarashi_minimal.svg"):
