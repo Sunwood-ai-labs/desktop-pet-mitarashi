@@ -68,6 +68,8 @@
     let mode = 'running';
     let isDragging = false;
     let lastX, lastY;
+    let mouseDownX, mouseDownY; // For click detection
+    let hasMoved = false; // Track if mouse moved during click
     let walkDirection = 1; // 1: 右へ, -1: 左へ
     let walkSpeed = 3;
     let walkTimer = null;
@@ -130,6 +132,9 @@
       isDragging = true;
       lastX = e.screenX;
       lastY = e.screenY;
+      mouseDownX = e.screenX;
+      mouseDownY = e.screenY;
+      hasMoved = false;
       clearInterval(walkTimer);
     });
 
@@ -143,6 +148,10 @@
         currentX += deltaX;
         currentY += deltaY;
         window.electronAPI.windowDrag(deltaX, deltaY);
+        // Check if mouse moved significantly (more than 5 pixels)
+        if (Math.abs(e.screenX - mouseDownX) > 5 || Math.abs(e.screenY - mouseDownY) > 5) {
+          hasMoved = true;
+        }
       }
     });
 
@@ -160,15 +169,18 @@
       }
     });
 
-    // ダブルクリックでモード切り替え
-    container.addEventListener('dblclick', () => {
-      mode = mode === 'running' ? 'idle' : 'running';
-      updateImage();
-      if (mode === 'running') {
-        updateScreenSize();
-        startAutoWalk();
-      } else {
-        clearInterval(walkTimer);
+    // シングルクリックでモード切り替え（ドラッグなしの場合）
+    container.addEventListener('click', () => {
+      // Only toggle mode if mouse hasn't moved significantly (not a drag)
+      if (!hasMoved) {
+        mode = mode === 'running' ? 'idle' : 'running';
+        updateImage();
+        if (mode === 'running') {
+          updateScreenSize();
+          startAutoWalk();
+        } else {
+          clearInterval(walkTimer);
+        }
       }
     });
 
