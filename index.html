@@ -37,13 +37,17 @@
       height: 80px;
       object-fit: contain;
       filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-      transition: transform 0.1s ease;
+      transition: transform 0.1s ease, opacity 0.3s ease;
       image-rendering: pixelated;
       image-rendering: crisp-edges;
     }
 
     .mascot.flip {
       transform: scaleX(-1);
+    }
+
+    .mascot.idle {
+      opacity: 0.8;
     }
 
     .mascot:hover {
@@ -60,8 +64,8 @@
     const container = document.getElementById('container');
     const mascot = document.getElementById('mascot');
 
-    // 自動走行モード
-    let autoWalkMode = true;
+    // モード: 'running' または 'idle'
+    let mode = 'running';
     let isDragging = false;
     let lastX, lastY;
     let walkDirection = 1; // 1: 右へ, -1: 左へ
@@ -85,20 +89,27 @@
       currentY = pos.y;
     });
 
+    // 画像を切り替え
+    function updateImage() {
+      if (mode === 'running') {
+        mascot.src = 'assets/running_cat.webp';
+        mascot.classList.remove('idle');
+      } else {
+        mascot.src = 'assets/mitarashi.webp';
+        mascot.classList.add('idle');
+      }
+    }
+
     // 自動走行
     function startAutoWalk() {
-      if (!autoWalkMode) return;
+      if (mode !== 'running') return;
 
       walkTimer = setInterval(() => {
-        if (isDragging || !autoWalkMode) return;
+        if (isDragging || mode !== 'running') return;
 
-        // 画面下端付近を走行
         const bottomY = screenHeight - 120;
-
-        // X座標を更新
         currentX += walkSpeed * walkDirection;
 
-        // 画面端に達したら反転
         if (currentX >= screenWidth - 130) {
           currentX = screenWidth - 130;
           walkDirection = -1;
@@ -109,10 +120,7 @@
           mascot.classList.add('flip');
         }
 
-        // Y座標を画面下端に固定
         currentY = bottomY;
-
-        // ウィンドウ位置を更新
         window.electronAPI.setWindowPosition(currentX, currentY);
       }, 30);
     }
@@ -142,27 +150,24 @@
     document.addEventListener('mouseup', () => {
       if (isDragging) {
         isDragging = false;
-        // ドロップ後の位置を取得
         window.electronAPI.getWindowPosition().then(pos => {
           currentX = pos.x;
           currentY = pos.y;
         });
-        // 自動走行を再開
-        if (autoWalkMode) {
+        if (mode === 'running') {
           startAutoWalk();
         }
       }
     });
 
-    // ダブルクリックで自動走行のオン/オフ
+    // ダブルクリックでモード切り替え
     container.addEventListener('dblclick', () => {
-      autoWalkMode = !autoWalkMode;
-      if (autoWalkMode) {
-        mascot.style.filter = 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))';
+      mode = mode === 'running' ? 'idle' : 'running';
+      updateImage();
+      if (mode === 'running') {
         updateScreenSize();
         startAutoWalk();
       } else {
-        mascot.style.filter = 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3)) sepia(0.3)';
         clearInterval(walkTimer);
       }
     });

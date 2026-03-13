@@ -22,8 +22,6 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
-
-  // 初期位置を画面左下に設定
   mainWindow.setPosition(10, height - 120);
 }
 
