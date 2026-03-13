@@ -19,8 +19,8 @@
     }
 
     .container {
-      width: 200px;
-      height: 250px;
+      width: 120px;
+      height: 100px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -33,68 +33,155 @@
     }
 
     .mascot {
-      width: 180px;
-      height: 180px;
+      width: 100px;
+      height: 80px;
       object-fit: contain;
-      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
-      transition: transform 0.3s ease;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+      transition: transform 0.1s ease;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    .mascot.flip {
+      transform: scaleX(-1);
     }
 
     .mascot:hover {
-      transform: scale(1.05);
-    }
-
-    .name-tag {
-      margin-top: 8px;
-      padding: 4px 12px;
-      background: rgba(255, 255, 255, 0.85);
-      border-radius: 12px;
-      font-family: 'Segoe UI', sans-serif;
-      font-size: 12px;
-      color: #333;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
     }
   </style>
 </head>
 <body>
   <div class="container" id="container">
-    <img src="assets/mascot.webp" alt="Mitarashi" class="mascot" id="mascot">
-    <div class="name-tag">みたらし</div>
+    <img src="assets/running_cat.webp" alt="Running Cat" class="mascot flip" id="mascot">
   </div>
 
   <script>
     const container = document.getElementById('container');
+    const mascot = document.getElementById('mascot');
+
+    // 自動走行モード
+    let autoWalkMode = true;
     let isDragging = false;
     let lastX, lastY;
+    let walkDirection = 1; // 1: 右へ, -1: 左へ
+    let walkSpeed = 3;
+    let walkTimer = null;
+    let currentX, currentY;
+    let screenWidth, screenHeight;
 
+    // 画面サイズを取得
+    function updateScreenSize() {
+      window.electronAPI.getScreenSize().then(size => {
+        screenWidth = size.width;
+        screenHeight = size.height;
+      });
+    }
+
+    // 初期化
+    updateScreenSize();
+    window.electronAPI.getWindowPosition().then(pos => {
+      currentX = pos.x;
+      currentY = pos.y;
+    });
+
+    // 自動走行
+    function startAutoWalk() {
+      if (!autoWalkMode) return;
+
+      walkTimer = setInterval(() => {
+        if (isDragging || !autoWalkMode) return;
+
+        // 画面下端付近を走行
+        const bottomY = screenHeight - 120;
+
+        // X座標を更新
+        currentX += walkSpeed * walkDirection;
+
+        // 画面端に達したら反転
+        if (currentX >= screenWidth - 130) {
+          currentX = screenWidth - 130;
+          walkDirection = -1;
+          mascot.classList.remove('flip');
+        } else if (currentX <= 10) {
+          currentX = 10;
+          walkDirection = 1;
+          mascot.classList.add('flip');
+        }
+
+        // Y座標を画面下端に固定
+        currentY = bottomY;
+
+        // ウィンドウ位置を更新
+        window.electronAPI.setWindowPosition(currentX, currentY);
+      }, 30);
+    }
+
+    // ドラッグ開始
     container.addEventListener('mousedown', (e) => {
       isDragging = true;
       lastX = e.screenX;
       lastY = e.screenY;
+      clearInterval(walkTimer);
     });
 
+    // ドラッグ中
     document.addEventListener('mousemove', (e) => {
       if (isDragging) {
         const deltaX = e.screenX - lastX;
         const deltaY = e.screenY - lastY;
         lastX = e.screenX;
         lastY = e.screenY;
+        currentX += deltaX;
+        currentY += deltaY;
         window.electronAPI.windowDrag(deltaX, deltaY);
       }
     });
 
+    // ドラッグ終了
     document.addEventListener('mouseup', () => {
-      isDragging = false;
+      if (isDragging) {
+        isDragging = false;
+        // ドロップ後の位置を取得
+        window.electronAPI.getWindowPosition().then(pos => {
+          currentX = pos.x;
+          currentY = pos.y;
+        });
+        // 自動走行を再開
+        if (autoWalkMode) {
+          startAutoWalk();
+        }
+      }
     });
 
-    // ダブルクリックでランダムなアクション
+    // ダブルクリックで自動走行のオン/オフ
     container.addEventListener('dblclick', () => {
-      const mascot = document.getElementById('mascot');
-      mascot.style.transform = 'scale(1.2) rotate(10deg)';
-      setTimeout(() => {
-        mascot.style.transform = '';
-      }, 300);
+      autoWalkMode = !autoWalkMode;
+      if (autoWalkMode) {
+        mascot.style.filter = 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))';
+        updateScreenSize();
+        startAutoWalk();
+      } else {
+        mascot.style.filter = 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3)) sepia(0.3)';
+        clearInterval(walkTimer);
+      }
     });
+
+    // 右クリックで速度変更
+    container.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      walkSpeed = walkSpeed >= 8 ? 2 : walkSpeed + 2;
+    });
+
+    // 起動時に自動走行開始
+    setTimeout(() => {
+      updateScreenSize();
+      window.electronAPI.getWindowPosition().then(pos => {
+        currentX = pos.x;
+        currentY = pos.y;
+        startAutoWalk();
+      });
+    }, 500);
   </script>
 </body>
 </html>

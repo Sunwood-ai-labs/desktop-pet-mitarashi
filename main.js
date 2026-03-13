@@ -7,8 +7,8 @@ function createWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
 
   mainWindow = new BrowserWindow({
-    width: 200,
-    height: 250,
+    width: 130,
+    height: 110,
     transparent: true,
     frame: false,
     alwaysOnTop: true,
@@ -23,8 +23,8 @@ function createWindow() {
 
   mainWindow.loadFile('index.html');
 
-  // 初期位置を画面右下に設定
-  mainWindow.setPosition(width - 220, height - 270);
+  // 初期位置を画面左下に設定
+  mainWindow.setPosition(10, height - 120);
 }
 
 app.whenReady().then(() => {
@@ -47,4 +47,21 @@ app.on('window-all-closed', () => {
 ipcMain.on('window-drag', (event, { deltaX, deltaY }) => {
   const [currentX, currentY] = mainWindow.getPosition();
   mainWindow.setPosition(currentX + deltaX, currentY + deltaY);
+});
+
+// ウィンドウ位置設定用
+ipcMain.on('set-window-position', (event, { x, y }) => {
+  mainWindow.setPosition(Math.round(x), Math.round(y));
+});
+
+// ウィンドウ位置取得用
+ipcMain.handle('get-window-position', () => {
+  const [x, y] = mainWindow.getPosition();
+  return { x, y };
+});
+
+// 画面サイズ取得用
+ipcMain.handle('get-screen-size', () => {
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  return { width, height };
 });
