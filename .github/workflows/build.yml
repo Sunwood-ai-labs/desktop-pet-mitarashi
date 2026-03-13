@@ -6,6 +6,9 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
@@ -13,13 +16,10 @@ jobs:
         include:
           - os: windows-latest
             platform: win
-            ext: .exe
           - os: macos-latest
             platform: mac
-            ext: .dmg
           - os: ubuntu-latest
             platform: linux
-            ext: .AppImage
 
     runs-on: ${{ matrix.os }}
 
@@ -37,7 +37,7 @@ jobs:
         run: npm ci
 
       - name: Build Electron app
-        run: npm run build:${{ matrix.platform }}
+        run: npm run build:${{ matrix.platform }} -- --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -55,6 +55,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
 
     steps:
       - name: Download all artifacts
