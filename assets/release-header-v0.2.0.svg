@@ -46,18 +46,15 @@
 
   <!-- Subtitle -->
   <text x="820" y="480" font-family="Arial, sans-serif" font-size="18" fill="#D98943">
-    🎉 Initial Release
+    🎉 System Tray &amp; Random Mode
   </text>
 
-  <!-- Feature tags -->
-  <rect x="820" y="510" width="100" height="28" rx="14" fill="#D98943"/>
-  <text x="870" y="530" font-family="Arial, sans-serif" font-size="12" fill="#F2E2CE" text-anchor="middle">Auto-Walk</text>
-
-  <rect x="930" y="510" width="90" height="28" rx="14" fill="#BF622C"/>
-  <text x="975" y="530" font-family="Arial, sans-serif" font-size="12" fill="#F2E2CE" text-anchor="middle">Draggable</text>
-
-  <rect x="1030" y="510" width="120" height="28" rx="14" fill="#D98471"/>
-  <text x="1090" y="530" font-family="Arial, sans-serif" font-size="12" fill="#F2E2CE" text-anchor="middle">Speed Control</text>
+  <rect x="820" y="510" width="80" height="28" rx="14" fill="#D98943"/>
+  <text x="860" y="530" font-family="Arial, sans-serif" font-size="12" fill="#F2E2CE" text-anchor="middle">Tray</text>
+  <rect x="910" y="510" width="80" height="28" rx="14" fill="#BF622C"/>
+  <text x="950" y="530" font-family="Arial, sans-serif" font-size="12" fill="#F2E2CE" text-anchor="middle">Random</text>
+  <rect x="1000" y="510" width="80" height="28" rx="14" fill="#D98471"/>
+  <text x="1040" y="530" font-family="Arial, sans-serif" font-size="12" fill="#F2E2CE" text-anchor="middle">Bg</text>
 
   <!-- Paw prints decoration -->
   <g fill="#F2E2CE" opacity="0.2">

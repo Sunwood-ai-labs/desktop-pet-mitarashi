@@ -8,6 +8,7 @@ import argparse
 import re
 from pathlib import Path
 import xml.etree.ElementTree as ET
+import html
 
 
 def extract_graphical_content(svg_content: str) -> str:
@@ -61,7 +62,7 @@ def clean_element(elem):
         clean_element(child)
 
 
-def generate_release_header(version: str, output_path: str, source_svg: str = "assets/mitarashi_minimal.svg"):
+def generate_release_header(version: str, output_path: str, source_svg: str = "assets/mitarashi_minimal.svg", subtitle: str = None, features: list = None):
     """Generate a release header image with the cat character centered."""
 
     # Read the source SVG
@@ -73,6 +74,25 @@ def generate_release_header(version: str, output_path: str, source_svg: str = "a
 
     # Extract only the graphical content (paths)
     graphical_content = extract_graphical_content(source_content)
+
+    # Set subtitle
+    subtitle_text = html.escape(subtitle) if subtitle else "🎉 New Release"
+
+    # Generate feature tags
+    feature_colors = ["#D98943", "#BF622C", "#D98471"]
+    if features:
+        feature_tags_parts = []
+        x_pos = 820
+        for i, feature in enumerate(features[:3]):  # Max 3 features
+            color = feature_colors[i % len(feature_colors)]
+            width = max(80, len(feature) * 8 + 20)
+            escaped_feature = html.escape(feature)
+            feature_tags_parts.append(f'''  <rect x="{x_pos}" y="510" width="{width}" height="28" rx="14" fill="{color}"/>
+  <text x="{x_pos + width//2}" y="530" font-family="Arial, sans-serif" font-size="12" fill="#F2E2CE" text-anchor="middle">{escaped_feature}</text>''')
+            x_pos += width + 10
+        feature_tags = "\n".join(feature_tags_parts)
+    else:
+        feature_tags = ""
 
     # Create new SVG with centered cat and text
     new_svg = f'''<?xml version="1.0" encoding="UTF-8" standalone="no"?>
@@ -104,7 +124,7 @@ def generate_release_header(version: str, output_path: str, source_svg: str = "a
 
   <!-- Centered cat character -->
   <g transform="translate(90, 150)">
-    {graphical_content}
+    ''' + graphical_content + '''
   </g>
 
   <!-- Title section on the right -->
@@ -118,23 +138,15 @@ def generate_release_header(version: str, output_path: str, source_svg: str = "a
   <!-- Version badge -->
   <rect x="820" y="380" width="140" height="50" rx="25" fill="url(#accent-gradient)"/>
   <text x="890" y="418" font-family="Arial, sans-serif" font-size="26" font-weight="bold" fill="#F2E2CE" text-anchor="middle">
-    v{version}
+    v''' + version + '''
   </text>
 
   <!-- Subtitle -->
   <text x="820" y="480" font-family="Arial, sans-serif" font-size="18" fill="#D98943">
-    🎉 Initial Release
+    ''' + subtitle_text + '''
   </text>
 
-  <!-- Feature tags -->
-  <rect x="820" y="510" width="100" height="28" rx="14" fill="#D98943"/>
-  <text x="870" y="530" font-family="Arial, sans-serif" font-size="12" fill="#F2E2CE" text-anchor="middle">Auto-Walk</text>
-
-  <rect x="930" y="510" width="90" height="28" rx="14" fill="#BF622C"/>
-  <text x="975" y="530" font-family="Arial, sans-serif" font-size="12" fill="#F2E2CE" text-anchor="middle">Draggable</text>
-
-  <rect x="1030" y="510" width="120" height="28" rx="14" fill="#D98471"/>
-  <text x="1090" y="530" font-family="Arial, sans-serif" font-size="12" fill="#F2E2CE" text-anchor="middle">Speed Control</text>
+''' + feature_tags + '''
 
   <!-- Paw prints decoration -->
   <g fill="#F2E2CE" opacity="0.2">
@@ -200,10 +212,14 @@ def main():
     parser.add_argument("--version", required=True, help="Version string (e.g., 0.1.0)")
     parser.add_argument("--output", required=True, help="Output file path")
     parser.add_argument("--source", default="assets/mitarashi_minimal.svg", help="Source SVG file")
+    parser.add_argument("--subtitle", default=None, help="Subtitle text (e.g., '🎉 System Tray Support')")
+    parser.add_argument("--features", default=None, help="Comma-separated feature tags (e.g., 'Tray,Random,Bg')")
 
     args = parser.parse_args()
 
-    generate_release_header(args.version, args.output, args.source)
+    features = args.features.split(",") if args.features else None
+
+    generate_release_header(args.version, args.output, args.source, args.subtitle, features)
 
 
 if __name__ == "__main__":
