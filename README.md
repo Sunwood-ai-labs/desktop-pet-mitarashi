@@ -1,5 +1,6 @@
 <div align="center">
-  <img src="./assets/mitarashi.webp" alt="Mitarashi" width="200">
+  <img src="./assets/mitarashi.webp" alt="Mitarashi Idle" width="150">
+  <img src="./assets/running_cat.webp" alt="Mitarashi Running" width="150">
   <h1>Desktop Pet Mitarashi</h1>
   <p>A cute running cat desktop mascot application</p>
   <p>
@@ -23,7 +24,7 @@ A desktop mascot application featuring a cute running cat that walks along the b
 ## Features
 
 - **Auto-Walk Mode**: The cat automatically walks along the bottom of your screen
-- **Idle Mode**: Double-click to switch to idle mode (static image)
+- **Idle Mode**: Click to switch to idle mode (static image)
 - **Draggable**: Click and drag to move the cat anywhere on your screen
 - **Always on Top**: Stays visible above other windows
 - **Transparent Window**: The character appears without a background window
@@ -33,8 +34,8 @@ A desktop mascot application featuring a cute running cat that walks along the b
 
 | Action | Result |
 |--------|--------|
+| **Click** | Toggle between idle/running mode |
 | **Drag** | Move the cat around |
-| **Double-click** | Toggle between idle/running mode |
 | **Right-click** | Change walking speed (2 → 4 → 6 → 8 → 2...) |
 
 ## Tech Stack
@@ -68,6 +69,13 @@ npm run build:mac
 # Build for Linux
 npm run build:linux
 ```
+
+## CI/CD
+
+This project uses GitHub Actions for automated builds and releases.
+
+- **On tag push (v*)**: Builds for all platforms and creates a GitHub Release
+- **Manual dispatch**: Build artifacts without creating a release
 
 ## License
 
