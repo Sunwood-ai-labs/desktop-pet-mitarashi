@@ -1,107 +1,103 @@
 <div align="center">
-  <img src="./assets/mitarashi.webp" alt="みたらし 待機" width="150">
-  <img src="./assets/running_cat.webp" alt="みたらし 走行" width="150">
-  <h1>デスクトップマスコット みたらし</h1>
-  <p>画面下を走るかわいい猫のデスクトップマスコット</p>
+  <img src="./assets/release-header.svg" alt="Desktop Pet Mitarashi のヘッダー画像" width="100%">
+  <h1>Desktop Pet Mitarashi</h1>
+  <p>Windows / macOS / Linux で動く、Electron 製のデスクトップ猫マスコットです。</p>
   <p>
-    <img src="https://img.shields.io/badge/Electron-41.0-47848F?logo=electron&logoColor=white" alt="Electron">
-    <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License">
+    <img src="https://img.shields.io/badge/Electron-41.0-47848F?logo=electron&logoColor=white" alt="Electron 41">
+    <img src="https://img.shields.io/badge/Platforms-Windows%20%7C%20macOS%20%7C%20Linux-2F5259" alt="対応プラットフォーム">
+    <img src="https://img.shields.io/github/v/release/Sunwood-ai-labs/desktop-pet-mitarashi?display_name=tag" alt="最新リリース">
+    <img src="https://img.shields.io/badge/License-MIT-D98943.svg" alt="MIT License">
+  </p>
+  <p>
+    <a href="./README.md"><strong>English</strong></a>
+    |
+    <a href="./README.ja.md"><strong>日本語</strong></a>
+    |
+    <a href="https://sunwood-ai-labs.github.io/desktop-pet-mitarashi/"><strong>Docs</strong></a>
   </p>
 </div>
 
----
+Desktop Pet Mitarashi は、画面下を歩く猫マスコットを常駐表示できるデスクトップアプリです。トレイメニューからモード切替や速度変更を行え、Windows と macOS ではログイン時の自動起動にも対応しています。
 
-画面下を自動で走るかわいい猫のデスクトップマスコットアプリケーションです。
+## ✨ 特長
 
-## 特徴
+- 画面下端を猫が自動で歩く、軽量なデスクトップマスコットです。
+- トレイから `Running`、`Idle`、`Random` の各モードを即座に切り替えられます。
+- ドラッグで好きな位置へ移動でき、通常クリックで手動モードの切替も行えます。
+- 右クリックで歩行速度を `2 -> 4 -> 6 -> 8 -> 2` の順に切り替えられます。
+- 背景イラストの表示切替で、少しにぎやかな演出も楽しめます。
+- Windows / macOS ではトレイからログイン時起動を有効化できます。
 
-- **自動走行モード**: 猫が画面下を自動で歩き回ります
-- **待機モード**: クリックで待機モード（静止画）に切り替え
-- **ドラッグ移動**: クリックしてドラッグすると、画面上の好きな場所に移動できます
-- **常に最前面**: 他のウィンドウの上に表示され続けます
-- **透過ウィンドウ**: 背景なしでキャラクターが表示されます
-- **速度変更**: 右クリックで歩く速度を変更できます
-
-## 操作方法
-
-| 操作 | 結果 |
-|------|------|
-| **クリック** | 待機/走行モード切り替え |
-| **ドラッグ** | 猫を移動 |
-| **右クリック** | 歩行速度の変更 (2 → 4 → 6 → 8 → 2...) |
-
-## 技術スタック
-
-- **Electron**: デスクトップアプリケーションフレームワーク
-- **Vanilla JS**: 軽量で高速
-
-## インストール
+## 🚀 クイックスタート
 
 ```bash
 git clone https://github.com/Sunwood-ai-labs/desktop-pet-mitarashi.git
 cd desktop-pet-mitarashi
-npm install
-```
-
-## 開発
-
-```bash
+npm ci
 npm start
 ```
 
-## 自動起動
+## 🎮 操作方法
 
-PC の起動後に Mitarashi を自動で立ち上げたい場合は、次の手順で設定できます。
+| 操作 | 動作 |
+| --- | --- |
+| クリック | 手動モード中に `Running` と `Idle` を切り替え |
+| ドラッグ | マスコットを任意の位置へ移動 |
+| マスコットを右クリック | 速度を `2 -> 4 -> 6 -> 8 -> 2` の順で変更 |
+| トレイアイコンをダブルクリック | マスコットウィンドウを再表示してフォーカス |
 
-1. アプリを起動します。
-2. タスクトレイのアイコンを右クリックします。
-3. Windows では `Start with Windows`、macOS では `Start at Login` を有効にします。
+## 🪟 トレイメニュー
 
-Windows では、自動起動で立ち上がった場合にログイン直後の邪魔にならないようトレイに隠れた状態で開始します。
+| メニュー | 内容 |
+| --- | --- |
+| `Show` | トレイに隠れたマスコットを再表示 |
+| `Start with Windows` / `Start at Login` | 対応 OS でログイン時起動を設定 |
+| `Running Mode` / `Idle Mode` / `Random Mode` | マスコットの挙動を即時変更 |
+| `Speed: Fast` / `Medium` / `Slow` | 速度を `8`、`5`、`2` に設定 |
+| `Show Background` | 背景イラストの表示を切り替え |
+| `Quit` | アプリを完全終了 |
 
-## ビルド
+## 📚 ドキュメント
+
+- 公開ドキュメント: [sunwood-ai-labs.github.io/desktop-pet-mitarashi](https://sunwood-ai-labs.github.io/desktop-pet-mitarashi/)
+- ローカルプレビュー:
 
 ```bash
-# Windows用
+npm run docs:install
+npm run docs:dev
+```
+
+## 🛠️ 開発
+
+```bash
+# デスクトップアプリのビルド
 npm run build:win
-
-# macOS用
 npm run build:mac
-
-# Linux用
 npm run build:linux
+
+# ドキュメントサイトのビルド
+npm run docs:build
 ```
 
-## CI/CD
+ローカルビルドでは、生成したいプラットフォームに対応するコマンドを使ってください。特に macOS / Windows 向け成果物は、それぞれの OS 上でのビルドが最も確実です。
 
-GitHub Actionsによる自動ビルドとリリース
-
-- **タグプッシュ時 (v*)**: 全プラットフォーム用にビルドし、GitHub Releaseを作成
-- **タグと版数の同期**: `v0.2.0` のようなタグでビルドすると、CI 内でアプリの版数も `0.2.0` に自動同期
-- **手動実行**: リリースを作成せずにビルドのみ実行
-
-## 開発用スクリプト
-
-### リリースヘッダー生成
-
-GitHubリリース用のヘッダー画像を生成します：
+リリース用ヘッダー画像は、同梱の Python スクリプトで再生成できます。
 
 ```bash
-uv run python scripts/generate_release_header.py --version 0.1.0 --output assets/release-header-v0.1.0.svg
+uv run python scripts/generate_release_header.py --version 0.2.0 --output assets/release-header.svg
 ```
 
-**オプション:**
-- `--version`: バージョン文字列（例: `0.1.0`）
-- `--output`: 出力ファイルパス
-- `--source`: 元SVGファイル（デフォルト: `assets/mitarashi_minimal.svg`）
+## 📦 リリースフロー
 
-このスクリプトは`mitarashi_minimal.svg`から猫キャラクターを抽出し、Inkscapeメタデータを削除して、プロジェクトのブランドカラーでスタイリングしたヘッダー画像を生成します。
+- `v*` 形式のタグを push すると、GitHub Actions が各プラットフォーム向けビルドを実行します。
+- CI 実行時にタグ名から `package.json` のバージョンを同期し、成果物の版番号を揃えます。
+- ビルド完了後、成果物は GitHub Release に自動で添付されます。
+- VitePress ドキュメントは `main` ブランチから GitHub Pages にデプロイされます。
 
-## ライセンス
+## 🤝 コントリビュート
 
-MIT License - [LICENSE](LICENSE) をご覧ください。
+参加方法は [CONTRIBUTING.md](./CONTRIBUTING.md) にまとめています。Issue と Pull Request を歓迎します。
 
-## クレジット
+## 📄 ライセンス
 
-- キャラクターデザイン: オリジナルアーティスト
-- Electron で構築
+このプロジェクトは [MIT License](./LICENSE) で公開しています。

@@ -1,116 +1,103 @@
 <div align="center">
-  <img src="./assets/mitarashi.webp" alt="Mitarashi Idle" width="150">
-  <img src="./assets/running_cat.webp" alt="Mitarashi Running" width="150">
+  <img src="./assets/release-header.svg" alt="Desktop Pet Mitarashi header art" width="100%">
   <h1>Desktop Pet Mitarashi</h1>
-  <p>A cute running cat desktop mascot application</p>
+  <p>Tray-friendly desktop cat mascot built with Electron for Windows, macOS, and Linux.</p>
   <p>
-    <img src="https://img.shields.io/badge/Electron-41.0-47848F?logo=electron&logoColor=white" alt="Electron">
-    <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License">
+    <img src="https://img.shields.io/badge/Electron-41.0-47848F?logo=electron&logoColor=white" alt="Electron 41">
+    <img src="https://img.shields.io/badge/Platforms-Windows%20%7C%20macOS%20%7C%20Linux-2F5259" alt="Platforms">
+    <img src="https://img.shields.io/github/v/release/Sunwood-ai-labs/desktop-pet-mitarashi?display_name=tag" alt="Latest release">
+    <img src="https://img.shields.io/badge/License-MIT-D98943.svg" alt="MIT License">
   </p>
   <p>
-    <a href="./README.md">
-      <img src="https://img.shields.io/badge/Language-English-blue.svg" alt="English">
-    </a>
-    <a href="./README.ja.md">
-      <img src="https://img.shields.io/badge/Language-Japanese-lightgrey.svg" alt="Japanese">
-    </a>
+    <a href="./README.md"><strong>English</strong></a>
+    |
+    <a href="./README.ja.md"><strong>日本語</strong></a>
+    |
+    <a href="https://sunwood-ai-labs.github.io/desktop-pet-mitarashi/"><strong>Docs</strong></a>
   </p>
 </div>
 
----
+Desktop Pet Mitarashi keeps a cat mascot walking along the bottom edge of your desktop. It stays in the tray, supports quick mode switching, can launch at login on Windows and macOS, and includes release automation for shipping builds across all three desktop platforms.
 
-A desktop mascot application featuring a cute running cat that walks along the bottom of your screen.
+## ✨ Highlights
 
-## Features
+- Auto-walk the mascot across the bottom of the current display.
+- Switch between `Running`, `Idle`, and `Random` modes from the tray.
+- Drag the mascot anywhere on screen without losing the quick toggle behavior.
+- Change walk speed from the tray or cycle speed with right-click.
+- Toggle a wide background illustration behind the mascot for a more playful scene.
+- Enable launch at login on Windows and macOS directly from the tray menu.
 
-- **Auto-Walk Mode**: The cat automatically walks along the bottom of your screen
-- **Idle Mode**: Click to switch to idle mode (static image)
-- **Draggable**: Click and drag to move the cat anywhere on your screen
-- **Always on Top**: Stays visible above other windows
-- **Transparent Window**: The character appears without a background window
-- **Speed Control**: Right-click to change walking speed
-- **Startup Toggle**: Enable launch at login from the tray menu
-
-## Controls
-
-| Action | Result |
-|--------|--------|
-| **Click** | Toggle between idle/running mode |
-| **Drag** | Move the cat around |
-| **Right-click** | Change walking speed (2 → 4 → 6 → 8 → 2...) |
-
-## Tech Stack
-
-- **Electron**: Desktop application framework
-- **Vanilla JS**: Lightweight and fast
-
-## Installation
+## 🚀 Quick Start
 
 ```bash
 git clone https://github.com/Sunwood-ai-labs/desktop-pet-mitarashi.git
 cd desktop-pet-mitarashi
-npm install
-```
-
-## Development
-
-```bash
+npm ci
 npm start
 ```
 
-## Startup
+## 🎮 Controls
 
-To launch Mitarashi automatically when you sign in:
+| Action | Result |
+| --- | --- |
+| Click | Toggle between `Running` and `Idle` while the app is in manual mode |
+| Drag | Move the mascot anywhere on screen |
+| Right-click on the mascot | Cycle speed through `2 -> 4 -> 6 -> 8 -> 2` |
+| Double-click the tray icon | Show and focus the mascot window |
 
-1. Start the app.
-2. Open the tray icon menu.
-3. Enable `Start with Windows` on Windows or `Start at Login` on macOS.
+## 🪟 Tray Menu
 
-On Windows, the auto-launched app starts hidden in the tray so it does not steal focus during login.
+| Menu Item | What It Does |
+| --- | --- |
+| `Show` | Reopens the mascot window if it is hidden in the tray |
+| `Start with Windows` / `Start at Login` | Registers launch at login on supported platforms |
+| `Running Mode` / `Idle Mode` / `Random Mode` | Changes the mascot behavior immediately |
+| `Speed: Fast` / `Medium` / `Slow` | Sets the walk speed to `8`, `5`, or `2` |
+| `Show Background` | Shows or hides the wide background illustration |
+| `Quit` | Exits the app completely |
 
-## Build
+## 📚 Documentation
+
+- Project docs: [sunwood-ai-labs.github.io/desktop-pet-mitarashi](https://sunwood-ai-labs.github.io/desktop-pet-mitarashi/)
+- Local docs preview:
 
 ```bash
-# Build for Windows
+npm run docs:install
+npm run docs:dev
+```
+
+## 🛠️ Development
+
+```bash
+# Build the desktop app
 npm run build:win
-
-# Build for macOS
 npm run build:mac
-
-# Build for Linux
 npm run build:linux
+
+# Build the docs site
+npm run docs:build
 ```
 
-## CI/CD
+Use the build target that matches the platform you are packaging for. For local development, macOS and Windows artifacts are most reliable when built on their native host OS.
 
-This project uses GitHub Actions for automated builds and releases.
-
-- **On tag push (v*)**: Builds for all platforms and creates a GitHub Release
-- **Version sync on tag builds**: `v0.2.0` style tags automatically set the app version to `0.2.0` during CI before packaging
-- **Manual dispatch**: Build artifacts without creating a release
-
-## Development Scripts
-
-### Release Header Generator
-
-Generate a release header image for GitHub releases:
+The release header asset can be regenerated with the bundled Python helper:
 
 ```bash
-uv run python scripts/generate_release_header.py --version 0.1.0 --output assets/release-header-v0.1.0.svg
+uv run python scripts/generate_release_header.py --version 0.2.0 --output assets/release-header.svg
 ```
 
-**Options:**
-- `--version`: Version string (e.g., `0.1.0`)
-- `--output`: Output file path
-- `--source`: Source SVG file (default: `assets/mitarashi_minimal.svg`)
+## 📦 Release Flow
 
-The script extracts the cat character from `mitarashi_minimal.svg`, cleans Inkscape metadata, and generates a styled header image with the project branding.
+- Tag pushes that match `v*` trigger multi-platform Electron builds in GitHub Actions.
+- The tag name is synced back into `package.json` during CI so release artifacts match the published version.
+- Release artifacts are attached to a GitHub Release automatically after the build matrix finishes.
+- The VitePress docs site is published to GitHub Pages from the `main` branch workflow.
 
-## License
+## 🤝 Contributing
 
-MIT License - see [LICENSE](LICENSE) for details.
+Contribution details live in [CONTRIBUTING.md](./CONTRIBUTING.md). Issues and pull requests are welcome.
 
-## Credits
+## 📄 License
 
-- Character design: Original artist
-- Built with Electron
+This project is released under the [MIT License](./LICENSE).
