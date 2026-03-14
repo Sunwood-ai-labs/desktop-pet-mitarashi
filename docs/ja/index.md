@@ -6,8 +6,8 @@ hero:
   text: デスクトップを走る、トレイ常駐の猫マスコット
   tagline: 画面下を歩く猫を常駐させ、トレイからモードや速度を切り替え、Windows・macOS・Linux 向けに配布できます。
   image:
-    src: /release-header.svg
-    alt: Desktop Pet Mitarashi ヘッダー画像
+    src: /mitarashi.webp
+    alt: みたらしマスコット
   actions:
     - theme: brand
       text: はじめに

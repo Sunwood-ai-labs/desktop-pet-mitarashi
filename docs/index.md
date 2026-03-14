@@ -6,8 +6,8 @@ hero:
   text: A tray-friendly running cat for your desktop
   tagline: Keep a playful mascot at the bottom of your screen, switch modes from the tray, and ship builds for Windows, macOS, and Linux.
   image:
-    src: /release-header.svg
-    alt: Desktop Pet Mitarashi header art
+    src: /mitarashi.webp
+    alt: Mitarashi mascot
   actions:
     - theme: brand
       text: Get Started
