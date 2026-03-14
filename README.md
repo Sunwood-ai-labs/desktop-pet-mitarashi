@@ -29,6 +29,7 @@ A desktop mascot application featuring a cute running cat that walks along the b
 - **Always on Top**: Stays visible above other windows
 - **Transparent Window**: The character appears without a background window
 - **Speed Control**: Right-click to change walking speed
+- **Startup Toggle**: Enable launch at login from the tray menu
 
 ## Controls
 
@@ -57,6 +58,16 @@ npm install
 npm start
 ```
 
+## Startup
+
+To launch Mitarashi automatically when you sign in:
+
+1. Start the app.
+2. Open the tray icon menu.
+3. Enable `Start with Windows` on Windows or `Start at Login` on macOS.
+
+On Windows, the auto-launched app starts hidden in the tray so it does not steal focus during login.
+
 ## Build
 
 ```bash
@@ -75,6 +86,7 @@ npm run build:linux
 This project uses GitHub Actions for automated builds and releases.
 
 - **On tag push (v*)**: Builds for all platforms and creates a GitHub Release
+- **Version sync on tag builds**: `v0.2.0` style tags automatically set the app version to `0.2.0` during CI before packaging
 - **Manual dispatch**: Build artifacts without creating a release
 
 ## Development Scripts

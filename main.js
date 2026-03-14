@@ -2,20 +2,89 @@ const { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage } = require
 const path = require('path');
 const sharp = require('sharp');
 
-let mainWindow;
+const STARTUP_FLAG = '--launch-at-login';
+
+let mainWindow = null;
 let backgroundWindow = null;
 let tray = null;
 let isBackgroundVisible = false;
 let currentMode = 'running';
 
-function createWindow() {
+function supportsLaunchAtLogin() {
+  return process.platform === 'win32' || process.platform === 'darwin';
+}
+
+function getStartupExecutablePath() {
+  if (process.platform === 'win32' && process.env.PORTABLE_EXECUTABLE_FILE) {
+    return process.env.PORTABLE_EXECUTABLE_FILE;
+  }
+
+  return process.execPath;
+}
+
+function getStartupRegistrationArgs() {
+  if (process.platform !== 'win32') {
+    return [];
+  }
+
+  if (app.isPackaged) {
+    return [STARTUP_FLAG];
+  }
+
+  return [path.resolve(app.getAppPath()), STARTUP_FLAG];
+}
+
+function getLaunchAtLoginSettings() {
+  if (!supportsLaunchAtLogin()) {
+    return { openAtLogin: false };
+  }
+
+  if (process.platform === 'win32') {
+    return app.getLoginItemSettings({
+      path: getStartupExecutablePath(),
+      args: getStartupRegistrationArgs()
+    });
+  }
+
+  return app.getLoginItemSettings();
+}
+
+function isLaunchAtLoginEnabled() {
+  return Boolean(getLaunchAtLoginSettings().openAtLogin);
+}
+
+function setLaunchAtLogin(enabled) {
+  if (!supportsLaunchAtLogin()) {
+    return;
+  }
+
+  const settings = { openAtLogin: enabled };
+
+  if (process.platform === 'darwin') {
+    settings.openAsHidden = true;
+  } else if (process.platform === 'win32') {
+    settings.path = getStartupExecutablePath();
+    settings.args = getStartupRegistrationArgs();
+  }
+
+  app.setLoginItemSettings(settings);
+}
+
+function shouldStartHidden() {
+  if (process.platform === 'darwin') {
+    return Boolean(app.getLoginItemSettings().wasOpenedAsHidden);
+  }
+
+  return process.argv.includes(STARTUP_FLAG);
+}
+
+function createWindow({ show = true } = {}) {
   const workArea = screen.getPrimaryDisplay().workArea;
-  // workArea: {x, y, width, height} - タスクバーを除いた作業領域
-  // 作業領域の下端 = workArea.y + workArea.height
 
   mainWindow = new BrowserWindow({
     width: 130,
     height: 110,
+    show,
     transparent: true,
     frame: false,
     alwaysOnTop: true,
@@ -29,21 +98,57 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
-  // タスクバーのすぐ上に配置（作業領域の下端からウィンドウ高さを引く）
   mainWindow.setPosition(workArea.x + 10, workArea.y + workArea.height - 110);
 
-  // ウィンドウを閉じる際、トレイに最小化（終了しない）
   mainWindow.on('close', (event) => {
     if (!app.isQuitting) {
       event.preventDefault();
       mainWindow.hide();
     }
   });
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+}
+
+function ensureMainWindow({ show = true, focus = false } = {}) {
+  if (!mainWindow) {
+    createWindow({ show });
+  } else if (show) {
+    mainWindow.show();
+  }
+
+  if (focus && mainWindow) {
+    mainWindow.focus();
+  }
+
+  return mainWindow;
+}
+
+function showMainWindow() {
+  ensureMainWindow({ show: true, focus: true });
+}
+
+function sendToMainWindow(channel, payload) {
+  ensureMainWindow({ show: false });
+
+  const dispatch = () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(channel, payload);
+    }
+  };
+
+  if (mainWindow.webContents.isLoadingMainFrame()) {
+    mainWindow.webContents.once('did-finish-load', dispatch);
+    return;
+  }
+
+  dispatch();
 }
 
 function createBackgroundWindow() {
   const workArea = screen.getPrimaryDisplay().workArea;
-  // 画像アスペクト比: 1360x436 → 約3.12:1
   const imageAspectRatio = 1360 / 436;
   const windowHeight = Math.round(workArea.width / imageAspectRatio);
 
@@ -64,13 +169,8 @@ function createBackgroundWindow() {
   });
 
   backgroundWindow.loadFile('background.html');
-  // タスクバーのすぐ上に配置
   backgroundWindow.setPosition(workArea.x, workArea.y + workArea.height - windowHeight);
-
-  // クリックを透過
   backgroundWindow.setIgnoreMouseEvents(true);
-
-  // 初期状態は非表示
   backgroundWindow.hide();
 
   backgroundWindow.on('closed', () => {
@@ -80,8 +180,6 @@ function createBackgroundWindow() {
 
 async function createTray() {
   const iconPath = path.join(__dirname, 'assets', 'fav.svg');
-
-  // SVGをPNGに変換してトレイアイコンに設定
   const iconBuffer = await sharp(iconPath)
     .resize(16, 16, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .png()
@@ -89,63 +187,15 @@ async function createTray() {
 
   const trayIcon = nativeImage.createFromBuffer(iconBuffer);
   tray = new Tray(trayIcon);
-  tray.setToolTip('みたらし - Desktop Pet');
+  tray.setToolTip('Mitarashi Desktop Pet');
 
-  // 初期メニューを設定
   updateTrayMenu();
 
-  // ダブルクリックでウィンドウ表示
   tray.on('double-click', () => {
-    mainWindow.show();
-    mainWindow.focus();
+    showMainWindow();
   });
 }
 
-app.whenReady().then(async () => {
-  await createTray();
-  createWindow();
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
-});
-
-// トレイ常駐アプリのため、ウィンドウが閉じても終了しない
-app.on('window-all-closed', (event) => {
-  event.preventDefault();
-});
-
-// ドラッグ移動用
-ipcMain.on('window-drag', (event, { deltaX, deltaY }) => {
-  const [currentX, currentY] = mainWindow.getPosition();
-  mainWindow.setPosition(currentX + deltaX, currentY + deltaY);
-});
-
-// ウィンドウ位置設定用
-ipcMain.on('set-window-position', (event, { x, y }) => {
-  mainWindow.setPosition(Math.round(x), Math.round(y));
-});
-
-// ウィンドウ位置取得用
-ipcMain.handle('get-window-position', () => {
-  const [x, y] = mainWindow.getPosition();
-  return { x, y };
-});
-
-// 作業領域取得用（タスクバーを除いた領域）
-ipcMain.handle('get-work-area', () => {
-  const workArea = screen.getPrimaryDisplay().workArea;
-  return workArea;  // {x, y, width, height}
-});
-
-// 最前面設定
-ipcMain.on('set-always-on-top', (event, value) => {
-  mainWindow.setAlwaysOnTop(value, 'floating');
-});
-
-// 背景ウィンドウの表示/非表示
 function toggleBackground() {
   if (!backgroundWindow) {
     createBackgroundWindow();
@@ -159,73 +209,88 @@ function toggleBackground() {
     backgroundWindow.hide();
   }
 
-  // メニューを更新
   updateTrayMenu();
 }
 
-// トレイメニューを更新
 function updateTrayMenu() {
-  const contextMenu = Menu.buildFromTemplate([
+  const contextMenuTemplate = [
     {
-      label: '表示',
+      label: 'Show',
       click: () => {
-        mainWindow.show();
-        mainWindow.focus();
+        showMainWindow();
       }
     },
-    { type: 'separator' },
+    { type: 'separator' }
+  ];
+
+  if (supportsLaunchAtLogin()) {
+    contextMenuTemplate.push(
+      {
+        label: process.platform === 'win32' ? 'Start with Windows' : 'Start at Login',
+        type: 'checkbox',
+        checked: isLaunchAtLoginEnabled(),
+        click: (menuItem) => {
+          setLaunchAtLogin(menuItem.checked);
+          updateTrayMenu();
+        }
+      },
+      { type: 'separator' }
+    );
+  }
+
+  contextMenuTemplate.push(
     {
-      label: '走行モード',
+      label: 'Running Mode',
       type: 'radio',
       checked: currentMode === 'running',
       click: () => {
         currentMode = 'running';
-        mainWindow.webContents.send('set-mode', 'running');
-        mainWindow.show();
+        showMainWindow();
+        sendToMainWindow('set-mode', 'running');
       }
     },
     {
-      label: '待機モード',
+      label: 'Idle Mode',
       type: 'radio',
       checked: currentMode === 'idle',
       click: () => {
         currentMode = 'idle';
-        mainWindow.webContents.send('set-mode', 'idle');
-        mainWindow.show();
+        showMainWindow();
+        sendToMainWindow('set-mode', 'idle');
       }
     },
     {
-      label: 'ランダムモード',
+      label: 'Random Mode',
       type: 'radio',
       checked: currentMode === 'random',
       click: () => {
         currentMode = 'random';
-        mainWindow.webContents.send('set-mode', 'random');
-        mainWindow.show();
+        showMainWindow();
+        sendToMainWindow('set-mode', 'random');
       }
     },
     { type: 'separator' },
     {
-      label: '速度: 速い',
+      label: 'Speed: Fast',
       click: () => {
-        mainWindow.webContents.send('set-speed', 8);
+        sendToMainWindow('set-speed', 8);
       }
     },
     {
-      label: '速度: 普通',
+      label: 'Speed: Medium',
       click: () => {
-        mainWindow.webContents.send('set-speed', 5);
+        sendToMainWindow('set-speed', 5);
       }
     },
     {
-      label: '速度: 遅い',
+      label: 'Speed: Slow',
       click: () => {
-        mainWindow.webContents.send('set-speed', 2);
+        sendToMainWindow('set-speed', 2);
       }
     },
     { type: 'separator' },
     {
-      label: '背景表示',
+      label: 'Show Background',
       type: 'checkbox',
       checked: isBackgroundVisible,
       click: () => {
@@ -234,13 +299,55 @@ function updateTrayMenu() {
     },
     { type: 'separator' },
     {
-      label: '終了',
+      label: 'Quit',
       click: () => {
         app.isQuitting = true;
         app.quit();
       }
     }
-  ]);
+  );
 
-  tray.setContextMenu(contextMenu);
+  tray.setContextMenu(Menu.buildFromTemplate(contextMenuTemplate));
 }
+
+app.whenReady().then(async () => {
+  const startHidden = shouldStartHidden();
+
+  await createTray();
+  ensureMainWindow({ show: !startHidden });
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+      return;
+    }
+
+    showMainWindow();
+  });
+});
+
+app.on('window-all-closed', (event) => {
+  event.preventDefault();
+});
+
+ipcMain.on('window-drag', (event, { deltaX, deltaY }) => {
+  const [currentX, currentY] = mainWindow.getPosition();
+  mainWindow.setPosition(currentX + deltaX, currentY + deltaY);
+});
+
+ipcMain.on('set-window-position', (event, { x, y }) => {
+  mainWindow.setPosition(Math.round(x), Math.round(y));
+});
+
+ipcMain.handle('get-window-position', () => {
+  const [x, y] = mainWindow.getPosition();
+  return { x, y };
+});
+
+ipcMain.handle('get-work-area', () => {
+  return screen.getPrimaryDisplay().workArea;
+});
+
+ipcMain.on('set-always-on-top', (event, value) => {
+  mainWindow.setAlwaysOnTop(value, 'floating');
+});

@@ -1,10 +1,11 @@
 {
   "name": "desktop-pet-mitarashi",
-  "version": "1.0.0",
+  "version": "0.2.0",
   "description": "Desktop pet mascot application",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "sync-version-from-tag": "node scripts/sync-version-from-tag.js",
     "build": "electron-builder",
     "build:win": "electron-builder --win",
     "build:mac": "electron-builder --mac",
