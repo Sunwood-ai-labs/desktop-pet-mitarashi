@@ -1,6 +1,5 @@
 const { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
-const sharp = require('sharp');
 
 const STARTUP_FLAG = '--launch-at-login';
 
@@ -179,13 +178,8 @@ function createBackgroundWindow() {
 }
 
 async function createTray() {
-  const iconPath = path.join(__dirname, 'assets', 'fav.svg');
-  const iconBuffer = await sharp(iconPath)
-    .resize(16, 16, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-    .png()
-    .toBuffer();
-
-  const trayIcon = nativeImage.createFromBuffer(iconBuffer);
+  const iconPath = path.join(__dirname, 'assets', 'fav.png');
+  const trayIcon = nativeImage.createFromPath(iconPath);
   tray = new Tray(trayIcon);
   tray.setToolTip('Mitarashi Desktop Pet');
 
