@@ -1,10 +1,14 @@
 {
   "name": "desktop-pet-mitarashi",
   "version": "0.2.0",
-  "description": "Desktop pet mascot application",
+  "description": "Tray-friendly desktop cat mascot with running, idle, and random modes.",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "docs:install": "npm --prefix docs ci",
+    "docs:dev": "npm --prefix docs run docs:dev",
+    "docs:build": "npm --prefix docs run docs:build",
+    "docs:preview": "npm --prefix docs run docs:preview",
     "sync-version-from-tag": "node scripts/sync-version-from-tag.js",
     "build": "electron-builder",
     "build:win": "electron-builder --win",
@@ -13,12 +17,25 @@
   },
   "keywords": [
     "desktop-pet",
+    "desktop-mascot",
     "electron",
+    "tray-app",
     "mascot",
     "cat"
   ],
-  "author": "",
+  "author": "Sunwood AI Labs",
   "license": "MIT",
+  "homepage": "https://sunwood-ai-labs.github.io/desktop-pet-mitarashi/",
+  "bugs": {
+    "url": "https://github.com/Sunwood-ai-labs/desktop-pet-mitarashi/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sunwood-ai-labs/desktop-pet-mitarashi.git"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "devDependencies": {
     "electron": "^41.0.2",
     "electron-builder": "^26.8.1",
@@ -28,8 +45,10 @@
     "appId": "com.mitarashi.desktop-pet",
     "productName": "Mitarashi Desktop Pet",
     "directories": {
-      "output": "dist"
+      "output": "dist",
+      "buildResources": "assets"
     },
+    "icon": "assets/app-icon.png",
     "files": [
       "**/*",
       "!**/node_modules/*/{CHANGELOG.md,README.md,readme.md,readme}",
@@ -38,13 +57,16 @@
     ],
     "win": {
       "target": "portable",
-      "forceCodeSigning": false
+      "forceCodeSigning": false,
+      "icon": "assets/app-icon.png"
     },
     "mac": {
-      "target": "dmg"
+      "target": "dmg",
+      "icon": "assets/app-icon.png"
     },
     "linux": {
-      "target": "AppImage"
+      "target": "AppImage",
+      "icon": "assets/app-icon.png"
     }
   }
 }

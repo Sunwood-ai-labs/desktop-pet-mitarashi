@@ -27,3 +27,8 @@ dist-electron
 # Electron
 out/
 release/
+
+# VitePress
+docs/.vitepress/cache
+docs/.vitepress/dist
+dist-polish
