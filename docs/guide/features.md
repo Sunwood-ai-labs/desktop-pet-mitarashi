@@ -4,7 +4,7 @@
 
 The tray exposes three behavior modes:
 
-- `Running`: the mascot walks automatically along the bottom edge of the current display.
+- `Running`: the mascot walks automatically around the outer edges of the current display.
 - `Idle`: the mascot stays visible but stops walking.
 - `Random`: the mascot alternates between running and idle on a timer.
 
@@ -12,10 +12,9 @@ Clicking the mascot toggles between `Running` and `Idle` while the app is in man
 
 ## Speed Control
 
-There are two ways to change the speed:
+You can change the speed from the tray menu:
 
 - Use the tray items `Speed: Fast`, `Speed: Medium`, and `Speed: Slow`.
-- Right-click the mascot to cycle speed through `2 -> 4 -> 6 -> 8 -> 2`.
 
 ## Background Illustration
 

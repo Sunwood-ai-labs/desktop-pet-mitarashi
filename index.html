@@ -40,10 +40,7 @@
       transition: transform 0.1s ease, opacity 0.3s ease;
       image-rendering: pixelated;
       image-rendering: crisp-edges;
-    }
-
-    .mascot.flip {
-      transform: scaleX(-1);
+      transform-origin: center center;
     }
 
     .mascot.idle {
@@ -57,41 +54,162 @@
 </head>
 <body>
   <div class="container" id="container">
-    <img src="assets/running_cat.webp" alt="Running Cat" class="mascot flip" id="mascot">
+    <img src="assets/running_cat.webp" alt="Running Cat" class="mascot" id="mascot">
   </div>
 
   <script>
     const container = document.getElementById('container');
     const mascot = document.getElementById('mascot');
 
-    // モード: 'running', 'idle', または 'random'
+    const WINDOW_SIZE = { width: 130, height: 110 };
+    const EDGE_OVERHANG = 24;
+    const CLICK_DRAG_THRESHOLD = 5;
+    const CLOCKWISE = 1;
+    const COUNTER_CLOCKWISE = -1;
+
     let mode = 'running';
-    // ランダムモード時の実際のモード
     let effectiveMode = 'running';
     let randomTimer = null;
     let isDragging = false;
-    let lastX, lastY;
-    let mouseDownX, mouseDownY; // For click detection
-    let hasMoved = false; // Track if mouse moved during click
-    let walkDirection = 1; // 1: 右へ, -1: 左へ
+    let lastX = 0;
+    let lastY = 0;
+    let mouseDownX = 0;
+    let mouseDownY = 0;
+    let hasMoved = false;
     let walkSpeed = 3;
     let walkTimer = null;
-    let currentX, currentY;
-    let workArea = { x: 0, y: 0, width: 0, height: 0 };
+    let currentX = 0;
+    let currentY = 0;
+    let pathOffset = 0;
+    let currentEdge = 'bottom';
+    let travelDirection = COUNTER_CLOCKWISE;
+    let displayBounds = { x: 0, y: 0, width: 0, height: 0 };
 
-    // 作業領域を取得
-    async function updateWorkArea() {
-      workArea = await window.electronAPI.getWorkArea();
-      return workArea;
+    function shouldRun() {
+      return mode === 'random' ? effectiveMode === 'running' : mode === 'running';
     }
 
-    // 初期化
-    updateWorkArea();
+    async function updateDisplayBounds() {
+      displayBounds = await window.electronAPI.getDisplayBounds();
+      return displayBounds;
+    }
 
-    // 画像を切り替え
+    function clamp(value, min, max) {
+      return Math.min(Math.max(value, min), max);
+    }
+
+    function normalizeOffset(offset, perimeter) {
+      if (perimeter <= 0) {
+        return 0;
+      }
+
+      return ((offset % perimeter) + perimeter) % perimeter;
+    }
+
+    function getTrackMetrics() {
+      const minX = displayBounds.x - EDGE_OVERHANG;
+      const maxX = displayBounds.x + displayBounds.width - WINDOW_SIZE.width + EDGE_OVERHANG;
+      const minY = displayBounds.y - EDGE_OVERHANG;
+      const maxY = displayBounds.y + displayBounds.height - WINDOW_SIZE.height + EDGE_OVERHANG;
+      const spanX = Math.max(maxX - minX, 1);
+      const spanY = Math.max(maxY - minY, 1);
+
+      return {
+        minX,
+        maxX,
+        minY,
+        maxY,
+        spanX,
+        spanY,
+        perimeter: (spanX * 2) + (spanY * 2)
+      };
+    }
+
+    function getTrackPositionFromOffset(offset, track = getTrackMetrics()) {
+      const normalizedOffset = normalizeOffset(offset, track.perimeter);
+
+      if (normalizedOffset < track.spanX) {
+        return {
+          edge: 'top',
+          x: track.minX + normalizedOffset,
+          y: track.minY
+        };
+      }
+
+      if (normalizedOffset < track.spanX + track.spanY) {
+        return {
+          edge: 'right',
+          x: track.maxX,
+          y: track.minY + (normalizedOffset - track.spanX)
+        };
+      }
+
+      if (normalizedOffset < (track.spanX * 2) + track.spanY) {
+        return {
+          edge: 'bottom',
+          x: track.maxX - (normalizedOffset - track.spanX - track.spanY),
+          y: track.maxY
+        };
+      }
+
+      return {
+        edge: 'left',
+        x: track.minX,
+        y: track.maxY - (normalizedOffset - (track.spanX * 2) - track.spanY)
+      };
+    }
+
+    function getMovementVector(edge) {
+      if (travelDirection === CLOCKWISE) {
+        switch (edge) {
+          case 'top':
+            return { dx: 1, dy: 0 };
+          case 'right':
+            return { dx: 0, dy: 1 };
+          case 'bottom':
+            return { dx: -1, dy: 0 };
+          default:
+            return { dx: 0, dy: -1 };
+        }
+      }
+
+      switch (edge) {
+        case 'top':
+          return { dx: -1, dy: 0 };
+        case 'right':
+          return { dx: 0, dy: -1 };
+        case 'bottom':
+          return { dx: 1, dy: 0 };
+        default:
+          return { dx: 0, dy: 1 };
+      }
+    }
+
+    function applyMascotPose(edge = currentEdge) {
+      const movement = getMovementVector(edge);
+      let rotation = 0;
+      let flip = 1;
+
+      if (edge === 'bottom') {
+        rotation = 0;
+        flip = movement.dx > 0 ? -1 : 1;
+      } else if (edge === 'top') {
+        rotation = 180;
+        flip = movement.dx < 0 ? -1 : 1;
+      } else if (edge === 'left') {
+        rotation = 90;
+        flip = movement.dy > 0 ? -1 : 1;
+      } else {
+        rotation = -90;
+        flip = movement.dy < 0 ? -1 : 1;
+      }
+
+      mascot.style.transform = `rotate(${rotation}deg) scaleX(${flip})`;
+    }
+
     function updateImage() {
-      // ランダムモード時は effectiveMode を使用
       const currentMode = mode === 'random' ? effectiveMode : mode;
+
       if (currentMode === 'running') {
         mascot.src = 'assets/running_cat.webp';
         mascot.classList.remove('idle');
@@ -99,9 +217,83 @@
         mascot.src = 'assets/mitarashi.webp';
         mascot.classList.add('idle');
       }
+
+      applyMascotPose();
     }
 
-    // ランダムモードに入る
+    function stopAutoWalk() {
+      if (walkTimer) {
+        clearInterval(walkTimer);
+        walkTimer = null;
+      }
+    }
+
+    function snapToNearestEdge() {
+      const track = getTrackMetrics();
+      const clampedX = clamp(currentX, track.minX, track.maxX);
+      const clampedY = clamp(currentY, track.minY, track.maxY);
+      const candidates = [
+        {
+          edge: 'top',
+          x: clampedX,
+          y: track.minY,
+          offset: clampedX - track.minX
+        },
+        {
+          edge: 'right',
+          x: track.maxX,
+          y: clampedY,
+          offset: track.spanX + (clampedY - track.minY)
+        },
+        {
+          edge: 'bottom',
+          x: clampedX,
+          y: track.maxY,
+          offset: track.spanX + track.spanY + (track.maxX - clampedX)
+        },
+        {
+          edge: 'left',
+          x: track.minX,
+          y: clampedY,
+          offset: (track.spanX * 2) + track.spanY + (track.maxY - clampedY)
+        }
+      ];
+
+      let nearestCandidate = candidates[0];
+      let shortestDistance = Infinity;
+
+      candidates.forEach((candidate) => {
+        const distance = Math.hypot(currentX - candidate.x, currentY - candidate.y);
+        if (distance < shortestDistance) {
+          shortestDistance = distance;
+          nearestCandidate = candidate;
+        }
+      });
+
+      currentX = nearestCandidate.x;
+      currentY = nearestCandidate.y;
+      currentEdge = nearestCandidate.edge;
+      pathOffset = normalizeOffset(nearestCandidate.offset, track.perimeter);
+      applyMascotPose();
+      window.electronAPI.setWindowPosition(currentX, currentY);
+    }
+
+    async function preparePathFromCurrentPosition() {
+      await updateDisplayBounds();
+      snapToNearestEdge();
+    }
+
+    function syncWindowToPath() {
+      const track = getTrackMetrics();
+      const nextPosition = getTrackPositionFromOffset(pathOffset, track);
+
+      currentEdge = nextPosition.edge;
+      currentX = nextPosition.x;
+      currentY = nextPosition.y;
+      applyMascotPose();
+      window.electronAPI.setWindowPosition(currentX, currentY);
+    }
+
     function enterRandomMode() {
       effectiveMode = 'running';
       scheduleNextSwitch();
@@ -109,161 +301,135 @@
       startAutoWalk();
     }
 
-    // ランダムモードから出る
     function exitRandomMode() {
       if (randomTimer) {
         clearTimeout(randomTimer);
         randomTimer = null;
       }
-      // effectiveModeを現在のmodeにリセット
+
       effectiveMode = mode;
     }
 
-    // 次のモード切り替えをスケジュール
     function scheduleNextSwitch() {
-      if (mode !== 'random') return;
+      if (mode !== 'random') {
+        return;
+      }
 
-      // 現在の effectiveMode に応じた時間を設定
       const delay = effectiveMode === 'running'
-        ? (Math.random() * 7000 + 3000)  // 走行: 3〜10秒
-        : (Math.random() * 3000 + 2000); // 待機: 2〜5秒
+        ? (Math.random() * 7000 + 3000)
+        : (Math.random() * 3000 + 2000);
 
       randomTimer = setTimeout(() => {
-        // モードを切り替え
         effectiveMode = effectiveMode === 'running' ? 'idle' : 'running';
 
         if (effectiveMode === 'running') {
           updateImage();
           startAutoWalk();
         } else {
-          clearInterval(walkTimer);
+          stopAutoWalk();
           updateImage();
         }
 
-        // 次の切り替えをスケジュール
         scheduleNextSwitch();
       }, delay);
     }
 
-    // 自動走行
-    function startAutoWalk() {
-      // ランダムモード時は effectiveMode をチェック
-      const shouldRun = mode === 'random' ? effectiveMode === 'running' : mode === 'running';
-      if (!shouldRun) {
-        // 走行しない場合は既存のタイマーをクリア
-        clearInterval(walkTimer);
-        walkTimer = null;
+    async function startAutoWalk() {
+      if (!shouldRun()) {
+        stopAutoWalk();
         return;
       }
 
-      // 既存のタイマーがあればクリア（重複防止）
-      if (walkTimer) {
-        clearInterval(walkTimer);
+      stopAutoWalk();
+      await preparePathFromCurrentPosition();
+
+      if (isDragging || !shouldRun()) {
+        return;
       }
 
-      // 最前面設定
       window.electronAPI.setAlwaysOnTop(true);
-
       walkTimer = setInterval(() => {
-        const shouldRun = mode === 'random' ? effectiveMode === 'running' : mode === 'running';
-        if (isDragging || !shouldRun) return;
-
-        // タスクバーのすぐ上（作業領域の下端）
-        const bottomY = workArea.y + workArea.height - 110;
-        currentX += walkSpeed * walkDirection;
-
-        // 横方向の境界（作業領域内）
-        const maxX = workArea.x + workArea.width - 130;
-        const minX = workArea.x + 10;
-
-        if (currentX >= maxX) {
-          currentX = maxX;
-          walkDirection = -1;
-          mascot.classList.remove('flip');
-        } else if (currentX <= minX) {
-          currentX = minX;
-          walkDirection = 1;
-          mascot.classList.add('flip');
+        if (isDragging || !shouldRun()) {
+          return;
         }
 
-        currentY = bottomY;
-        window.electronAPI.setWindowPosition(currentX, currentY);
+        const track = getTrackMetrics();
+        pathOffset = normalizeOffset(pathOffset + (walkSpeed * travelDirection), track.perimeter);
+        syncWindowToPath();
       }, 30);
     }
 
-    // ドラッグ開始
-    container.addEventListener('mousedown', (e) => {
+    container.addEventListener('mousedown', (event) => {
       isDragging = true;
-      lastX = e.screenX;
-      lastY = e.screenY;
-      mouseDownX = e.screenX;
-      mouseDownY = e.screenY;
+      lastX = event.screenX;
+      lastY = event.screenY;
+      mouseDownX = event.screenX;
+      mouseDownY = event.screenY;
       hasMoved = false;
-      clearInterval(walkTimer);
+      stopAutoWalk();
     });
 
-    // ドラッグ中
-    document.addEventListener('mousemove', (e) => {
-      if (isDragging) {
-        const deltaX = e.screenX - lastX;
-        const deltaY = e.screenY - lastY;
-        lastX = e.screenX;
-        lastY = e.screenY;
-        currentX += deltaX;
-        currentY += deltaY;
-        window.electronAPI.windowDrag(deltaX, deltaY);
-        // Check if mouse moved significantly (more than 5 pixels)
-        if (Math.abs(e.screenX - mouseDownX) > 5 || Math.abs(e.screenY - mouseDownY) > 5) {
-          hasMoved = true;
-        }
+    document.addEventListener('mousemove', (event) => {
+      if (!isDragging) {
+        return;
+      }
+
+      const deltaX = event.screenX - lastX;
+      const deltaY = event.screenY - lastY;
+
+      lastX = event.screenX;
+      lastY = event.screenY;
+      currentX += deltaX;
+      currentY += deltaY;
+      window.electronAPI.windowDrag(deltaX, deltaY);
+
+      if (
+        Math.abs(event.screenX - mouseDownX) > CLICK_DRAG_THRESHOLD ||
+        Math.abs(event.screenY - mouseDownY) > CLICK_DRAG_THRESHOLD
+      ) {
+        hasMoved = true;
       }
     });
 
-    // ドラッグ終了
-    document.addEventListener('mouseup', () => {
-      if (isDragging) {
-        isDragging = false;
-        window.electronAPI.getWindowPosition().then(pos => {
-          currentX = pos.x;
-          currentY = pos.y;
-        });
-        const shouldRun = mode === 'random' ? effectiveMode === 'running' : mode === 'running';
-        if (shouldRun) {
-          startAutoWalk();
-        }
+    document.addEventListener('mouseup', async () => {
+      if (!isDragging) {
+        return;
+      }
+
+      isDragging = false;
+      const position = await window.electronAPI.getWindowPosition();
+      currentX = position.x;
+      currentY = position.y;
+
+      if (shouldRun()) {
+        await startAutoWalk();
       }
     });
 
-    // シングルクリックでモード切り替え（ドラッグなしの場合）
-    container.addEventListener('click', () => {
-      // Only toggle mode if mouse hasn't moved significantly (not a drag)
-      if (!hasMoved) {
-        // ランダムモード時はクリックでは切り替えない
-        if (mode === 'random') return;
-        mode = mode === 'running' ? 'idle' : 'running';
-        updateImage();
-        if (mode === 'running') {
-          updateWorkArea();
-          startAutoWalk();
-        } else {
-          clearInterval(walkTimer);
-        }
+    container.addEventListener('click', async () => {
+      if (hasMoved || mode === 'random') {
+        return;
+      }
+
+      mode = mode === 'running' ? 'idle' : 'running';
+      updateImage();
+
+      if (mode === 'running') {
+        await startAutoWalk();
+      } else {
+        stopAutoWalk();
       }
     });
 
-    // 右クリックで速度変更
-    container.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      walkSpeed = walkSpeed >= 8 ? 2 : walkSpeed + 2;
+    container.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
     });
 
-    // トレイからのモード変更
-    window.electronAPI.onSetMode((newMode) => {
-      // ランダムモードから出る場合
+    window.electronAPI.onSetMode(async (newMode) => {
       if (mode === 'random' && newMode !== 'random') {
         exitRandomMode();
       }
-      // ランダムモードに入る場合
+
       if (newMode === 'random') {
         mode = 'random';
         enterRandomMode();
@@ -272,26 +438,27 @@
 
       mode = newMode;
       updateImage();
+
       if (mode === 'running') {
-        updateWorkArea();
-        startAutoWalk();
+        await startAutoWalk();
       } else {
-        clearInterval(walkTimer);
+        stopAutoWalk();
       }
     });
 
-    // トレイからの速度変更
     window.electronAPI.onSetSpeed((newSpeed) => {
       walkSpeed = newSpeed;
     });
 
-    // 起動時に自動走行開始
+    applyMascotPose();
+
     setTimeout(async () => {
-      await updateWorkArea();
-      const pos = await window.electronAPI.getWindowPosition();
-      currentX = pos.x;
-      currentY = pos.y;
-      console.log('workArea:', workArea);  // デバッグ
+      await updateDisplayBounds();
+      const position = await window.electronAPI.getWindowPosition();
+      currentX = position.x;
+      currentY = position.y;
+      snapToNearestEdge();
+      updateImage();
       startAutoWalk();
     }, 500);
   </script>

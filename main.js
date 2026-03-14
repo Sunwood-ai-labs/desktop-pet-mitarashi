@@ -2,6 +2,9 @@ const { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage } = require
 const path = require('path');
 
 const STARTUP_FLAG = '--launch-at-login';
+const PET_WINDOW_WIDTH = 130;
+const PET_WINDOW_HEIGHT = 110;
+const EDGE_OVERHANG = 24;
 
 let mainWindow = null;
 let backgroundWindow = null;
@@ -77,12 +80,32 @@ function shouldStartHidden() {
   return process.argv.includes(STARTUP_FLAG);
 }
 
+function getPetDisplay() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return screen.getPrimaryDisplay();
+  }
+
+  const [windowX, windowY] = mainWindow.getPosition();
+  return screen.getDisplayNearestPoint({
+    x: Math.round(windowX + PET_WINDOW_WIDTH / 2),
+    y: Math.round(windowY + PET_WINDOW_HEIGHT / 2)
+  });
+}
+
+function getInitialPetPosition(display = screen.getPrimaryDisplay()) {
+  return {
+    x: display.bounds.x + 24,
+    y: display.bounds.y + display.bounds.height - PET_WINDOW_HEIGHT + EDGE_OVERHANG
+  };
+}
+
 function createWindow({ show = true } = {}) {
-  const workArea = screen.getPrimaryDisplay().workArea;
+  const initialDisplay = screen.getPrimaryDisplay();
+  const initialPosition = getInitialPetPosition(initialDisplay);
 
   mainWindow = new BrowserWindow({
-    width: 130,
-    height: 110,
+    width: PET_WINDOW_WIDTH,
+    height: PET_WINDOW_HEIGHT,
     show,
     transparent: true,
     frame: false,
@@ -97,7 +120,7 @@ function createWindow({ show = true } = {}) {
   });
 
   mainWindow.loadFile('index.html');
-  mainWindow.setPosition(workArea.x + 10, workArea.y + workArea.height - 110);
+  mainWindow.setPosition(initialPosition.x, initialPosition.y);
 
   mainWindow.on('close', (event) => {
     if (!app.isQuitting) {
@@ -339,7 +362,11 @@ ipcMain.handle('get-window-position', () => {
 });
 
 ipcMain.handle('get-work-area', () => {
-  return screen.getPrimaryDisplay().workArea;
+  return getPetDisplay().workArea;
+});
+
+ipcMain.handle('get-display-bounds', () => {
+  return getPetDisplay().bounds;
 });
 
 ipcMain.on('set-always-on-top', (event, value) => {

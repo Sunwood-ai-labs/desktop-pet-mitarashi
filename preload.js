@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setWindowPosition: (x, y) => ipcRenderer.send('set-window-position', { x, y }),
   getWindowPosition: () => ipcRenderer.invoke('get-window-position'),
   getWorkArea: () => ipcRenderer.invoke('get-work-area'),
+  getDisplayBounds: () => ipcRenderer.invoke('get-display-bounds'),
   setAlwaysOnTop: (value) => ipcRenderer.send('set-always-on-top', value),
 
   // トレイからのメッセージ受信
