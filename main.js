@@ -5,6 +5,7 @@ const STARTUP_FLAG = '--launch-at-login';
 const PET_WINDOW_WIDTH = 130;
 const PET_WINDOW_HEIGHT = 110;
 const EDGE_OVERHANG = 24;
+const ALWAYS_ON_TOP_LEVEL = 'screen-saver';
 
 let mainWindow = null;
 let backgroundWindow = null;
@@ -99,6 +100,30 @@ function getInitialPetPosition(display = screen.getPrimaryDisplay()) {
   };
 }
 
+function applyMainWindowBehavior() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  mainWindow.setAlwaysOnTop(true, ALWAYS_ON_TOP_LEVEL);
+  mainWindow.setIgnoreMouseEvents(true, { forward: true });
+  mainWindow.setFocusable(false);
+}
+
+function revealMainWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  if (typeof mainWindow.showInactive === 'function') {
+    mainWindow.showInactive();
+  } else {
+    mainWindow.show();
+  }
+
+  applyMainWindowBehavior();
+}
+
 function createWindow({ show = true } = {}) {
   const initialDisplay = screen.getPrimaryDisplay();
   const initialPosition = getInitialPetPosition(initialDisplay);
@@ -106,12 +131,13 @@ function createWindow({ show = true } = {}) {
   mainWindow = new BrowserWindow({
     width: PET_WINDOW_WIDTH,
     height: PET_WINDOW_HEIGHT,
-    show,
+    show: false,
     transparent: true,
     frame: false,
     alwaysOnTop: true,
     resizable: false,
     skipTaskbar: true,
+    focusable: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -121,6 +147,11 @@ function createWindow({ show = true } = {}) {
 
   mainWindow.loadFile('index.html');
   mainWindow.setPosition(initialPosition.x, initialPosition.y);
+  applyMainWindowBehavior();
+
+  if (show) {
+    revealMainWindow();
+  }
 
   mainWindow.on('close', (event) => {
     if (!app.isQuitting) {
@@ -134,22 +165,18 @@ function createWindow({ show = true } = {}) {
   });
 }
 
-function ensureMainWindow({ show = true, focus = false } = {}) {
+function ensureMainWindow({ show = true } = {}) {
   if (!mainWindow) {
     createWindow({ show });
   } else if (show) {
-    mainWindow.show();
-  }
-
-  if (focus && mainWindow) {
-    mainWindow.focus();
+    revealMainWindow();
   }
 
   return mainWindow;
 }
 
 function showMainWindow() {
-  ensureMainWindow({ show: true, focus: true });
+  ensureMainWindow({ show: true });
 }
 
 function sendToMainWindow(channel, payload) {
@@ -347,13 +374,9 @@ app.on('window-all-closed', (event) => {
   event.preventDefault();
 });
 
-ipcMain.on('window-drag', (event, { deltaX, deltaY }) => {
-  const [currentX, currentY] = mainWindow.getPosition();
-  mainWindow.setPosition(currentX + deltaX, currentY + deltaY);
-});
-
 ipcMain.on('set-window-position', (event, { x, y }) => {
   mainWindow.setPosition(Math.round(x), Math.round(y));
+  applyMainWindowBehavior();
 });
 
 ipcMain.handle('get-window-position', () => {
@@ -361,14 +384,6 @@ ipcMain.handle('get-window-position', () => {
   return { x, y };
 });
 
-ipcMain.handle('get-work-area', () => {
-  return getPetDisplay().workArea;
-});
-
 ipcMain.handle('get-display-bounds', () => {
   return getPetDisplay().bounds;
-});
-
-ipcMain.on('set-always-on-top', (event, value) => {
-  mainWindow.setAlwaysOnTop(value, 'floating');
 });

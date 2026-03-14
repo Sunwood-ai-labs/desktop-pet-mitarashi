@@ -8,7 +8,7 @@ The tray exposes three behavior modes:
 - `Idle`: the mascot stays visible but stops walking.
 - `Random`: the mascot alternates between running and idle on a timer.
 
-Clicking the mascot toggles between `Running` and `Idle` while the app is in manual mode. Dragging the mascot moves the window without triggering the click toggle.
+The mascot window stays always on top and click-through, so it remains visible without blocking clicks on your other apps.
 
 ## Speed Control
 
@@ -22,6 +22,6 @@ The tray item `Show Background` reveals a wide background illustration behind th
 
 ## Tray Interaction
 
-- Double-click the tray icon to reopen the mascot window.
+- Double-click the tray icon to reveal the mascot window without taking focus.
 - Use `Show` when the window is hidden.
 - Use `Quit` to exit fully instead of minimizing to the tray.

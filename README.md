@@ -18,13 +18,13 @@
   </p>
 </div>
 
-Desktop Pet Mitarashi keeps a cat mascot walking around the outer edges of your desktop. It stays in the tray, supports quick mode switching, can launch at login on Windows and macOS, and includes release automation for shipping builds across all three desktop platforms.
+Desktop Pet Mitarashi keeps a cat mascot walking around the outer edges of your desktop. It stays in the tray, remains visible above your windows without blocking clicks, can launch at login on Windows and macOS, and includes release automation for shipping builds across all three desktop platforms.
 
 ## ✨ Highlights
 
 - Auto-walk the mascot around the top, bottom, left, and right edges of the current display.
 - Switch between `Running`, `Idle`, and `Random` modes from the tray.
-- Drag the mascot anywhere on screen without losing the quick toggle behavior.
+- Keep the mascot always on top while letting mouse clicks pass through to the app underneath.
 - Change walk speed from the tray menu.
 - Toggle a wide background illustration behind the mascot for a more playful scene.
 - Enable launch at login on Windows and macOS directly from the tray menu.
@@ -42,9 +42,7 @@ npm start
 
 | Action | Result |
 | --- | --- |
-| Click | Toggle between `Running` and `Idle` while the app is in manual mode |
-| Drag | Move the mascot anywhere on screen |
-| Double-click the tray icon | Show and focus the mascot window |
+| Double-click the tray icon | Reveal the mascot window without stealing focus |
 
 ## 🪟 Tray Menu
 

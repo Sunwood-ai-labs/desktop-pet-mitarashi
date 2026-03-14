@@ -16,6 +16,7 @@
       overflow: hidden;
       -webkit-app-region: no-drag;
       user-select: none;
+      pointer-events: none;
     }
 
     .container {
@@ -25,11 +26,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      cursor: grab;
-    }
-
-    .container:active {
-      cursor: grabbing;
+      pointer-events: none;
     }
 
     .mascot {
@@ -41,15 +38,13 @@
       image-rendering: pixelated;
       image-rendering: crisp-edges;
       transform-origin: center center;
+      pointer-events: none;
     }
 
     .mascot.idle {
       opacity: 0.8;
     }
 
-    .mascot:hover {
-      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
-    }
   </style>
 </head>
 <body>
@@ -58,24 +53,16 @@
   </div>
 
   <script>
-    const container = document.getElementById('container');
     const mascot = document.getElementById('mascot');
 
     const WINDOW_SIZE = { width: 130, height: 110 };
     const EDGE_OVERHANG = 24;
-    const CLICK_DRAG_THRESHOLD = 5;
     const CLOCKWISE = 1;
     const COUNTER_CLOCKWISE = -1;
 
     let mode = 'running';
     let effectiveMode = 'running';
     let randomTimer = null;
-    let isDragging = false;
-    let lastX = 0;
-    let lastY = 0;
-    let mouseDownX = 0;
-    let mouseDownY = 0;
-    let hasMoved = false;
     let walkSpeed = 3;
     let walkTimer = null;
     let currentX = 0;
@@ -342,14 +329,8 @@
 
       stopAutoWalk();
       await preparePathFromCurrentPosition();
-
-      if (isDragging || !shouldRun()) {
-        return;
-      }
-
-      window.electronAPI.setAlwaysOnTop(true);
       walkTimer = setInterval(() => {
-        if (isDragging || !shouldRun()) {
+        if (!shouldRun()) {
           return;
         }
 
@@ -358,72 +339,6 @@
         syncWindowToPath();
       }, 30);
     }
-
-    container.addEventListener('mousedown', (event) => {
-      isDragging = true;
-      lastX = event.screenX;
-      lastY = event.screenY;
-      mouseDownX = event.screenX;
-      mouseDownY = event.screenY;
-      hasMoved = false;
-      stopAutoWalk();
-    });
-
-    document.addEventListener('mousemove', (event) => {
-      if (!isDragging) {
-        return;
-      }
-
-      const deltaX = event.screenX - lastX;
-      const deltaY = event.screenY - lastY;
-
-      lastX = event.screenX;
-      lastY = event.screenY;
-      currentX += deltaX;
-      currentY += deltaY;
-      window.electronAPI.windowDrag(deltaX, deltaY);
-
-      if (
-        Math.abs(event.screenX - mouseDownX) > CLICK_DRAG_THRESHOLD ||
-        Math.abs(event.screenY - mouseDownY) > CLICK_DRAG_THRESHOLD
-      ) {
-        hasMoved = true;
-      }
-    });
-
-    document.addEventListener('mouseup', async () => {
-      if (!isDragging) {
-        return;
-      }
-
-      isDragging = false;
-      const position = await window.electronAPI.getWindowPosition();
-      currentX = position.x;
-      currentY = position.y;
-
-      if (shouldRun()) {
-        await startAutoWalk();
-      }
-    });
-
-    container.addEventListener('click', async () => {
-      if (hasMoved || mode === 'random') {
-        return;
-      }
-
-      mode = mode === 'running' ? 'idle' : 'running';
-      updateImage();
-
-      if (mode === 'running') {
-        await startAutoWalk();
-      } else {
-        stopAutoWalk();
-      }
-    });
-
-    container.addEventListener('contextmenu', (event) => {
-      event.preventDefault();
-    });
 
     window.electronAPI.onSetMode(async (newMode) => {
       if (mode === 'random' && newMode !== 'random') {
