@@ -1,5 +1,6 @@
 <div align="center">
-  <img src="./assets/release-header.svg" alt="Desktop Pet Mitarashi header art" width="100%">
+  <img src="./assets/mitarashi.webp" alt="Mitarashi Idle" width="150">
+  <img src="./assets/running_cat.webp" alt="Mitarashi Running" width="150">
   <h1>Desktop Pet Mitarashi</h1>
   <p>Tray-friendly desktop cat mascot built with Electron for Windows, macOS, and Linux.</p>
   <p>

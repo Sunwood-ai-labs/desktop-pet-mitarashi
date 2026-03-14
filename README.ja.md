@@ -1,5 +1,6 @@
 <div align="center">
-  <img src="./assets/release-header.svg" alt="Desktop Pet Mitarashi のヘッダー画像" width="100%">
+  <img src="./assets/mitarashi.webp" alt="Mitarashi Idle" width="150">
+  <img src="./assets/running_cat.webp" alt="Mitarashi Running" width="150">
   <h1>Desktop Pet Mitarashi</h1>
   <p>Windows / macOS / Linux で動く、Electron 製のデスクトップ猫マスコットです。</p>
   <p>
