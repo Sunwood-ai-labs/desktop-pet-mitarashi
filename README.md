@@ -23,7 +23,8 @@ Desktop Pet Mitarashi keeps a cat mascot walking around the outer edges of your 
 ## ✨ Highlights
 
 - Auto-walk the mascot around the top, bottom, left, and right edges of the current display.
-- Switch between `Running`, `Idle`, and `Random` modes from the tray.
+- Switch between `Running`, `Idle`, `Random`, and `Codex` modes from the tray.
+- Let `Codex Mode` mirror live Codex activity so the mascot speeds up as more tasks run.
 - Keep the mascot always on top while letting mouse clicks pass through to the app underneath.
 - Change walk speed from the tray menu.
 - Toggle a wide background illustration behind the mascot for a more playful scene.
@@ -50,7 +51,7 @@ npm start
 | --- | --- |
 | `Show` | Reopens the mascot window if it is hidden in the tray |
 | `Start with Windows` / `Start at Login` | Registers launch at login on supported platforms |
-| `Running Mode` / `Idle Mode` / `Random Mode` | Changes the mascot behavior immediately |
+| `Running Mode` / `Idle Mode` / `Random Mode` / `Codex Mode` | Changes the mascot behavior immediately, with `Codex Mode` polling `.codex/state_5.sqlite` to scale speed from live task activity |
 | `Speed: Fast` / `Medium` / `Slow` | Sets the walk speed to `8`, `5`, or `2` |
 | `Show Background` | Shows or hides the wide background illustration |
 | `Quit` | Exits the app completely |

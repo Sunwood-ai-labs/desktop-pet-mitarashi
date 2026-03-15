@@ -1,17 +1,86 @@
 const { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage } = require('electron');
+const fs = require('fs');
 const path = require('path');
 
 const STARTUP_FLAG = '--launch-at-login';
-const PET_WINDOW_WIDTH = 130;
-const PET_WINDOW_HEIGHT = 110;
 const EDGE_OVERHANG = 24;
 const ALWAYS_ON_TOP_LEVEL = 'screen-saver';
+const CODEX_ACTIVITY_WINDOW_SECONDS = 180;
+const MASCOT_WINDOW_CONFIGS = [
+  {
+    id: 'cat',
+    windowWidth: 140,
+    windowHeight: 140,
+    startOffsetX: 32
+  },
+  {
+    id: 'penguin',
+    windowWidth: 108,
+    windowHeight: 108,
+    startOffsetX: 136
+  }
+];
 
-let mainWindow = null;
+const mascotWindows = new Map();
+
 let backgroundWindow = null;
 let tray = null;
 let isBackgroundVisible = false;
 let currentMode = 'running';
+
+function getCodexStateDatabasePath() {
+  const codexHome = process.env.CODEX_HOME || path.join(app.getPath('home'), '.codex');
+  return path.join(codexHome, 'state_5.sqlite');
+}
+
+function getCodexTaskStatus() {
+  const sampledAt = Date.now();
+  const databasePath = getCodexStateDatabasePath();
+
+  if (!fs.existsSync(databasePath)) {
+    return {
+      available: false,
+      taskCount: 0,
+      sampledAt,
+      activityWindowSeconds: CODEX_ACTIVITY_WINDOW_SECONDS
+    };
+  }
+
+  let database = null;
+
+  try {
+    const { DatabaseSync } = require('node:sqlite');
+    database = new DatabaseSync(databasePath, { readonly: true });
+
+    const cutoff = Math.floor(sampledAt / 1000) - CODEX_ACTIVITY_WINDOW_SECONDS;
+    const row = database
+      .prepare(`
+        SELECT COUNT(*) AS taskCount
+        FROM threads
+        WHERE archived = 0
+          AND updated_at >= ?
+      `)
+      .get(cutoff);
+
+    return {
+      available: true,
+      taskCount: Number(row?.taskCount ?? 0),
+      sampledAt,
+      activityWindowSeconds: CODEX_ACTIVITY_WINDOW_SECONDS
+    };
+  } catch (error) {
+    console.error('Failed to read Codex activity from .codex/state_5.sqlite', error);
+
+    return {
+      available: false,
+      taskCount: 0,
+      sampledAt,
+      activityWindowSeconds: CODEX_ACTIVITY_WINDOW_SECONDS
+    };
+  } finally {
+    database?.close();
+  }
+}
 
 function supportsLaunchAtLogin() {
   return process.platform === 'win32' || process.platform === 'darwin';
@@ -81,56 +150,64 @@ function shouldStartHidden() {
   return process.argv.includes(STARTUP_FLAG);
 }
 
-function getPetDisplay() {
-  if (!mainWindow || mainWindow.isDestroyed()) {
+function getWindowDisplay(targetWindow) {
+  if (!targetWindow || targetWindow.isDestroyed()) {
     return screen.getPrimaryDisplay();
   }
 
-  const [windowX, windowY] = mainWindow.getPosition();
+  const [windowX, windowY] = targetWindow.getPosition();
+  const [windowWidth, windowHeight] = targetWindow.getSize();
+
   return screen.getDisplayNearestPoint({
-    x: Math.round(windowX + PET_WINDOW_WIDTH / 2),
-    y: Math.round(windowY + PET_WINDOW_HEIGHT / 2)
+    x: Math.round(windowX + windowWidth / 2),
+    y: Math.round(windowY + windowHeight / 2)
   });
 }
 
-function getInitialPetPosition(display = screen.getPrimaryDisplay()) {
+function getMascotWindows() {
+  return MASCOT_WINDOW_CONFIGS
+    .map((config) => mascotWindows.get(config.id))
+    .filter((targetWindow) => targetWindow && !targetWindow.isDestroyed());
+}
+
+function getInitialMascotPosition(config, display = screen.getPrimaryDisplay()) {
   return {
-    x: display.bounds.x + 24,
-    y: display.bounds.y + display.bounds.height - PET_WINDOW_HEIGHT + EDGE_OVERHANG
+    x: display.bounds.x + config.startOffsetX,
+    y: display.bounds.y + display.bounds.height - config.windowHeight + EDGE_OVERHANG
   };
 }
 
-function applyMainWindowBehavior() {
-  if (!mainWindow || mainWindow.isDestroyed()) {
+function applyMascotWindowBehavior(targetWindow) {
+  if (!targetWindow || targetWindow.isDestroyed()) {
     return;
   }
 
-  mainWindow.setAlwaysOnTop(true, ALWAYS_ON_TOP_LEVEL);
-  mainWindow.setIgnoreMouseEvents(true, { forward: true });
-  mainWindow.setFocusable(false);
+  targetWindow.setAlwaysOnTop(true, ALWAYS_ON_TOP_LEVEL);
+  targetWindow.setIgnoreMouseEvents(true, { forward: true });
+  targetWindow.setFocusable(false);
 }
 
-function revealMainWindow() {
-  if (!mainWindow || mainWindow.isDestroyed()) {
+function revealMascotWindow(targetWindow) {
+  if (!targetWindow || targetWindow.isDestroyed()) {
     return;
   }
 
-  if (typeof mainWindow.showInactive === 'function') {
-    mainWindow.showInactive();
+  if (typeof targetWindow.showInactive === 'function') {
+    targetWindow.showInactive();
   } else {
-    mainWindow.show();
+    targetWindow.show();
   }
 
-  applyMainWindowBehavior();
+  applyMascotWindowBehavior(targetWindow);
 }
 
-function createWindow({ show = true } = {}) {
+function createMascotWindow(config, { show = true } = {}) {
   const initialDisplay = screen.getPrimaryDisplay();
-  const initialPosition = getInitialPetPosition(initialDisplay);
+  const initialPosition = getInitialMascotPosition(config, initialDisplay);
 
-  mainWindow = new BrowserWindow({
-    width: PET_WINDOW_WIDTH,
-    height: PET_WINDOW_HEIGHT,
+  const targetWindow = new BrowserWindow({
+    width: config.windowWidth,
+    height: config.windowHeight,
     show: false,
     transparent: true,
     frame: false,
@@ -145,55 +222,69 @@ function createWindow({ show = true } = {}) {
     }
   });
 
-  mainWindow.loadFile('index.html');
-  mainWindow.setPosition(initialPosition.x, initialPosition.y);
-  applyMainWindowBehavior();
+  targetWindow.loadFile('index.html', {
+    query: {
+      mascot: config.id
+    }
+  });
+
+  targetWindow.setPosition(initialPosition.x, initialPosition.y);
+  applyMascotWindowBehavior(targetWindow);
 
   if (show) {
-    revealMainWindow();
+    revealMascotWindow(targetWindow);
   }
 
-  mainWindow.on('close', (event) => {
+  targetWindow.on('close', (event) => {
     if (!app.isQuitting) {
       event.preventDefault();
-      mainWindow.hide();
+      targetWindow.hide();
     }
   });
 
-  mainWindow.on('closed', () => {
-    mainWindow = null;
+  targetWindow.on('closed', () => {
+    mascotWindows.delete(config.id);
+  });
+
+  mascotWindows.set(config.id, targetWindow);
+  return targetWindow;
+}
+
+function ensureMascotWindows({ show = true } = {}) {
+  return MASCOT_WINDOW_CONFIGS.map((config) => {
+    let targetWindow = mascotWindows.get(config.id);
+
+    if (!targetWindow || targetWindow.isDestroyed()) {
+      targetWindow = createMascotWindow(config, { show });
+    } else if (show) {
+      revealMascotWindow(targetWindow);
+    }
+
+    return targetWindow;
   });
 }
 
-function ensureMainWindow({ show = true } = {}) {
-  if (!mainWindow) {
-    createWindow({ show });
-  } else if (show) {
-    revealMainWindow();
-  }
-
-  return mainWindow;
+function showMascotWindows() {
+  ensureMascotWindows({ show: true });
 }
 
-function showMainWindow() {
-  ensureMainWindow({ show: true });
-}
+function sendToMascotWindows(channel, payload) {
+  const windows = ensureMascotWindows({ show: false });
 
-function sendToMainWindow(channel, payload) {
-  ensureMainWindow({ show: false });
+  windows.forEach((targetWindow) => {
+    const dispatch = () => {
+      if (targetWindow && !targetWindow.isDestroyed()) {
+        targetWindow.webContents.send(channel, payload);
+      }
+    };
 
-  const dispatch = () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send(channel, payload);
+    if (targetWindow.webContents.isLoadingMainFrame()) {
+      targetWindow.webContents.once('did-finish-load', dispatch);
+      return;
     }
-  };
 
-  if (mainWindow.webContents.isLoadingMainFrame()) {
-    mainWindow.webContents.once('did-finish-load', dispatch);
-    return;
-  }
-
-  dispatch();
+    dispatch();
+  });
 }
 
 function createBackgroundWindow() {
@@ -236,7 +327,7 @@ async function createTray() {
   updateTrayMenu();
 
   tray.on('double-click', () => {
-    showMainWindow();
+    showMascotWindows();
   });
 }
 
@@ -261,7 +352,7 @@ function updateTrayMenu() {
     {
       label: 'Show',
       click: () => {
-        showMainWindow();
+        showMascotWindows();
       }
     },
     { type: 'separator' }
@@ -289,8 +380,8 @@ function updateTrayMenu() {
       checked: currentMode === 'running',
       click: () => {
         currentMode = 'running';
-        showMainWindow();
-        sendToMainWindow('set-mode', 'running');
+        showMascotWindows();
+        sendToMascotWindows('set-mode', 'running');
       }
     },
     {
@@ -299,8 +390,8 @@ function updateTrayMenu() {
       checked: currentMode === 'idle',
       click: () => {
         currentMode = 'idle';
-        showMainWindow();
-        sendToMainWindow('set-mode', 'idle');
+        showMascotWindows();
+        sendToMascotWindows('set-mode', 'idle');
       }
     },
     {
@@ -309,27 +400,37 @@ function updateTrayMenu() {
       checked: currentMode === 'random',
       click: () => {
         currentMode = 'random';
-        showMainWindow();
-        sendToMainWindow('set-mode', 'random');
+        showMascotWindows();
+        sendToMascotWindows('set-mode', 'random');
+      }
+    },
+    {
+      label: 'Codex Mode',
+      type: 'radio',
+      checked: currentMode === 'codex',
+      click: () => {
+        currentMode = 'codex';
+        showMascotWindows();
+        sendToMascotWindows('set-mode', 'codex');
       }
     },
     { type: 'separator' },
     {
       label: 'Speed: Fast',
       click: () => {
-        sendToMainWindow('set-speed', 8);
+        sendToMascotWindows('set-speed', 8);
       }
     },
     {
       label: 'Speed: Medium',
       click: () => {
-        sendToMainWindow('set-speed', 5);
+        sendToMascotWindows('set-speed', 5);
       }
     },
     {
       label: 'Speed: Slow',
       click: () => {
-        sendToMainWindow('set-speed', 2);
+        sendToMascotWindows('set-speed', 2);
       }
     },
     { type: 'separator' },
@@ -358,15 +459,15 @@ app.whenReady().then(async () => {
   const startHidden = shouldStartHidden();
 
   await createTray();
-  ensureMainWindow({ show: !startHidden });
+  ensureMascotWindows({ show: !startHidden });
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+    if (getMascotWindows().length === 0) {
+      ensureMascotWindows({ show: true });
       return;
     }
 
-    showMainWindow();
+    showMascotWindows();
   });
 });
 
@@ -375,15 +476,32 @@ app.on('window-all-closed', (event) => {
 });
 
 ipcMain.on('set-window-position', (event, { x, y }) => {
-  mainWindow.setPosition(Math.round(x), Math.round(y));
-  applyMainWindowBehavior();
+  const targetWindow = BrowserWindow.fromWebContents(event.sender);
+
+  if (!targetWindow || targetWindow.isDestroyed()) {
+    return;
+  }
+
+  targetWindow.setPosition(Math.round(x), Math.round(y));
+  applyMascotWindowBehavior(targetWindow);
 });
 
-ipcMain.handle('get-window-position', () => {
-  const [x, y] = mainWindow.getPosition();
+ipcMain.handle('get-window-position', (event) => {
+  const targetWindow = BrowserWindow.fromWebContents(event.sender);
+
+  if (!targetWindow || targetWindow.isDestroyed()) {
+    return { x: 0, y: 0 };
+  }
+
+  const [x, y] = targetWindow.getPosition();
   return { x, y };
 });
 
-ipcMain.handle('get-display-bounds', () => {
-  return getPetDisplay().bounds;
+ipcMain.handle('get-display-bounds', (event) => {
+  const targetWindow = BrowserWindow.fromWebContents(event.sender);
+  return getWindowDisplay(targetWindow).bounds;
+});
+
+ipcMain.handle('get-codex-task-status', () => {
+  return getCodexTaskStatus();
 });
