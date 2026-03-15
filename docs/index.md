@@ -36,5 +36,6 @@ Desktop Pet Mitarashi is a lightweight Electron app that keeps a cat mascot visi
 
 - [Getting Started](/guide/getting-started): install the app, run it locally, and preview the docs site.
 - [Features and Controls](/guide/features): understand the tray actions, mascot modes, and screen behavior.
+- [v0.3.0 Launch Story](/guide/articles/v0.3.0-launch-story): read the broader story behind the dual-mascot update, Codex mode, and release workflow refresh.
 - [Build and Release](/guide/build-and-release): package the app and publish releases with GitHub Actions.
 - [v0.3.0 Release Notes](/guide/releases/v0.3.0): review the latest docs-backed release summary for the current feature set.
