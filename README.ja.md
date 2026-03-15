@@ -94,7 +94,7 @@ npm run docs:build
 リリース用ヘッダー画像は、付属の Python スクリプトで再生成できます。
 
 ```bash
-uv run python scripts/generate_release_header.py --version 0.2.0 --output assets/release-header.svg
+uv run python scripts/generate_release_header.py --version 0.3.0 --output assets/release-header.svg
 ```
 
 ## 開発者メモ

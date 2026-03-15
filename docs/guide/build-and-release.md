@@ -35,16 +35,20 @@ The repository includes a GitHub Actions workflow that:
 Example:
 
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.3.0
+git push origin v0.3.0
 ```
+
+Latest docs-backed release summary:
+
+- [v0.3.0 Release Notes](/guide/releases/v0.3.0)
 
 ## Regenerate the Release Header
 
 Use the bundled Python helper with `uv run`:
 
 ```bash
-uv run python scripts/generate_release_header.py --version 0.2.0 --output assets/release-header.svg
+uv run python scripts/generate_release_header.py --version 0.3.0 --output assets/release-header.svg
 ```
 
 ## Publish the Docs Site

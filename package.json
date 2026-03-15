@@ -1,6 +1,6 @@
 {
   "name": "desktop-pet-mitarashi",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Tray-friendly desktop cat mascot with running, idle, and random modes.",
   "main": "main.js",
   "scripts": {

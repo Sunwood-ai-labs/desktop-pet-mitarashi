@@ -41,15 +41,20 @@
   <!-- Version badge -->
   <rect x="820" y="380" width="140" height="50" rx="25" fill="url(#accent-gradient)"/>
   <text x="890" y="418" font-family="Arial, sans-serif" font-size="26" font-weight="bold" fill="#F2E2CE" text-anchor="middle">
-    v0.2.0
+    v0.3.0
   </text>
 
   <!-- Subtitle -->
   <text x="820" y="480" font-family="Arial, sans-serif" font-size="18" fill="#D98943">
-    🎉 New Release
+    Dual Mascots &amp; Codex Mode
   </text>
 
-
+  <rect x="820" y="510" width="116" height="28" rx="14" fill="#D98943"/>
+  <text x="878" y="530" font-family="Arial, sans-serif" font-size="12" fill="#F2E2CE" text-anchor="middle">Dual Mascots</text>
+  <rect x="946" y="510" width="80" height="28" rx="14" fill="#BF622C"/>
+  <text x="986" y="530" font-family="Arial, sans-serif" font-size="12" fill="#F2E2CE" text-anchor="middle">Codex</text>
+  <rect x="1036" y="510" width="80" height="28" rx="14" fill="#D98471"/>
+  <text x="1076" y="530" font-family="Arial, sans-serif" font-size="12" fill="#F2E2CE" text-anchor="middle">Docs</text>
 
   <!-- Paw prints decoration -->
   <g fill="#F2E2CE" opacity="0.2">

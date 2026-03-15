@@ -37,3 +37,4 @@ Desktop Pet Mitarashi は、作業画面の下端を歩く猫マスコットを�
 - [はじめに](/ja/guide/getting-started): インストール、起動、ローカル docs プレビュー
 - [機能と操作](/ja/guide/features): モード、速度、背景、トレイ操作の説明
 - [ビルドとリリース](/ja/guide/build-and-release): パッケージ化、タグ運用、GitHub Actions の流れ
+- [v0.3.0 リリースノート](/ja/guide/releases/v0.3.0): 現在の機能セットをまとめた docs 版のリリース要約

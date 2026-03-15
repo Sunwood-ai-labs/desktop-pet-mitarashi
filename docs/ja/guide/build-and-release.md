@@ -35,16 +35,20 @@ npm run build:linux
 例:
 
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.3.0
+git push origin v0.3.0
 ```
+
+最新の docs 版リリース要約:
+
+- [v0.3.0 リリースノート](/ja/guide/releases/v0.3.0)
 
 ## リリースヘッダー画像の再生成
 
 付属の Python ヘルパーは `uv run` で実行します。
 
 ```bash
-uv run python scripts/generate_release_header.py --version 0.2.0 --output assets/release-header.svg
+uv run python scripts/generate_release_header.py --version 0.3.0 --output assets/release-header.svg
 ```
 
 ## docs サイトの公開

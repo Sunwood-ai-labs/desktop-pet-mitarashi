@@ -50,6 +50,7 @@ export default defineConfig({
           { text: "Guide", link: "/guide/getting-started" },
           { text: "Features", link: "/guide/features" },
           { text: "Build & Release", link: "/guide/build-and-release" },
+          { text: "Releases", link: "/guide/releases/v0.3.0" },
           { text: "GitHub", link: repo }
         ],
         sidebar: [
@@ -59,6 +60,12 @@ export default defineConfig({
               { text: "Getting Started", link: "/guide/getting-started" },
               { text: "Features and Controls", link: "/guide/features" },
               { text: "Build and Release", link: "/guide/build-and-release" }
+            ]
+          },
+          {
+            text: "Releases",
+            items: [
+              { text: "v0.3.0", link: "/guide/releases/v0.3.0" }
             ]
           }
         ],
@@ -77,6 +84,7 @@ export default defineConfig({
           { text: "ガイド", link: "/ja/guide/getting-started" },
           { text: "機能", link: "/ja/guide/features" },
           { text: "ビルド", link: "/ja/guide/build-and-release" },
+          { text: "リリース", link: "/ja/guide/releases/v0.3.0" },
           { text: "GitHub", link: repo }
         ],
         sidebar: [
@@ -86,6 +94,12 @@ export default defineConfig({
               { text: "はじめに", link: "/ja/guide/getting-started" },
               { text: "機能と操作", link: "/ja/guide/features" },
               { text: "ビルドとリリース", link: "/ja/guide/build-and-release" }
+            ]
+          },
+          {
+            text: "リリース",
+            items: [
+              { text: "v0.3.0", link: "/ja/guide/releases/v0.3.0" }
             ]
           }
         ],

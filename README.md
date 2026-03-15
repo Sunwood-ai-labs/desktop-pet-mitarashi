@@ -94,7 +94,7 @@ Use the build target that matches the platform you are packaging for. For local 
 The release header asset can be regenerated with the bundled Python helper:
 
 ```bash
-uv run python scripts/generate_release_header.py --version 0.2.0 --output assets/release-header.svg
+uv run python scripts/generate_release_header.py --version 0.3.0 --output assets/release-header.svg
 ```
 
 ## Developer Notes

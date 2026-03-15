@@ -62,7 +62,7 @@ Use the build command that matches the platform you are packaging for. Cross-pla
 If you regenerate the release header artwork, use `uv run` for the Python helper:
 
 ```bash
-uv run python scripts/generate_release_header.py --version 0.2.0 --output assets/release-header.svg
+uv run python scripts/generate_release_header.py --version 0.3.0 --output assets/release-header.svg
 ```
 
 ## Development Guidelines

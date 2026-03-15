@@ -5,7 +5,7 @@ function parseVersionFromTag(tagName) {
   const match = /^v(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/.exec(tagName);
 
   if (!match) {
-    throw new Error(`Tag "${tagName}" must match v<semver>, for example v0.2.0`);
+    throw new Error(`Tag "${tagName}" must match v<semver>, for example v1.2.3`);
   }
 
   return match[1];
