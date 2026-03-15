@@ -15,7 +15,16 @@ npm ci
 npm start
 ```
 
-This launches the Electron app and creates a tray icon. Closing the mascot window hides it in the tray instead of quitting the app.
+This launches the Electron app, starts both mascot windows, and creates the tray icon. Closing a mascot window hides it in the tray instead of quitting the app.
+
+## Run the Windows Executable
+
+After a Windows build, the main launch targets are:
+
+- `dist/Mitarashi Desktop Pet <version>.exe`
+- `dist/win-unpacked/Mitarashi Desktop Pet.exe`
+
+Use the portable `.exe` for normal local runs or sharing, and use the unpacked executable when you want to inspect packaged behavior more closely.
 
 ## Preview the Docs
 

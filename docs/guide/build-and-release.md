@@ -14,6 +14,15 @@ The packaged artifacts are written to `dist/`.
 
 Use the command that matches the artifact you want to build. In local development, the most reliable path is to build Windows artifacts on Windows and macOS artifacts on macOS.
 
+## Windows Output Paths
+
+After `npm run build:win`, the main Windows outputs are:
+
+- portable build: `dist/Mitarashi Desktop Pet <version>.exe`
+- unpacked build: `dist/win-unpacked/Mitarashi Desktop Pet.exe`
+
+If you change mascot assets, movement logic, or tray behavior, rebuild the Windows target so those packaged files reflect the latest renderer and main-process code.
+
 ## Tag-Based Releases
 
 The repository includes a GitHub Actions workflow that:

@@ -2,11 +2,11 @@
   <img src="./assets/mitarashi.webp" alt="Mitarashi Idle" width="150">
   <img src="./assets/running_cat.webp" alt="Mitarashi Running" width="150">
   <h1>Desktop Pet Mitarashi</h1>
-  <p>Windows / macOS / Linux で動く、Electron 製のデスクトップ猫マスコットです。</p>
+  <p>Windows / macOS / Linux 向けの、トレイ常駐型 Electron デスクトップペットです。</p>
   <p>
     <img src="https://img.shields.io/badge/Electron-41.0-47848F?logo=electron&logoColor=white" alt="Electron 41">
-    <img src="https://img.shields.io/badge/Platforms-Windows%20%7C%20macOS%20%7C%20Linux-2F5259" alt="対応プラットフォーム">
-    <img src="https://img.shields.io/github/v/release/Sunwood-ai-labs/desktop-pet-mitarashi?display_name=tag" alt="最新リリース">
+    <img src="https://img.shields.io/badge/Platforms-Windows%20%7C%20macOS%20%7C%20Linux-2F5259" alt="Platforms">
+    <img src="https://img.shields.io/github/v/release/Sunwood-ai-labs/desktop-pet-mitarashi?display_name=tag" alt="Latest release">
     <img src="https://img.shields.io/badge/License-MIT-D98943.svg" alt="MIT License">
   </p>
   <p>
@@ -18,18 +18,19 @@
   </p>
 </div>
 
-Desktop Pet Mitarashi は、モニターの外周を歩く猫マスコットを常駐表示できるデスクトップアプリです。トレイメニューからモード切替や速度変更を行え、他のアプリのクリックを邪魔せず常に前面表示され、Windows と macOS ではログイン時の自動起動にも対応しています。
+Desktop Pet Mitarashi は、デスクトップ外周を歩くマスコットを表示するアプリです。現在の実装では、猫とペンギンをそれぞれ別の透明ウィンドウとして起動し、クリックを邪魔せず、角も別々に曲がるようになっています。
 
-## ✨ 特長
+## 特徴
 
-- モニターの上下左右を猫が自動で歩く、軽量なデスクトップマスコットです。
-- トレイから `Running`、`Idle`、`Random` の各モードを即座に切り替えられます。
-- マスコットは常に最前面に表示され、クリックは下のアプリへ透過します。
-- トレイメニューから歩行速度を切り替えられます。
-- 背景イラストの表示切替で、少しにぎやかな演出も楽しめます。
-- Windows / macOS ではトレイからログイン時起動を有効化できます。
+- 猫とペンギンの 2 体を、独立したウィンドウとして同時に表示できます。
+- `Running` / `Idle` / `Random` / `Codex` の各モードをトレイから切り替えられます。
+- `Codex Mode` では `.codex/state_5.sqlite` を参照し、Codex の稼働量に応じて移動速度が変化します。
+- 猫とペンギンには別々の速度係数があり、完全に同じテンポでは動きません。
+- マスコットは常に最前面に表示されつつ、クリックは背後のアプリへ透過します。
+- 背景イラストの表示切り替えに対応しています。
+- Windows / macOS ではログイン時起動をトレイから設定できます。
 
-## 🚀 クイックスタート
+## クイックスタート
 
 ```bash
 git clone https://github.com/Sunwood-ai-labs/desktop-pet-mitarashi.git
@@ -38,24 +39,35 @@ npm ci
 npm start
 ```
 
-## 🎮 操作方法
+`npm start` を実行すると、猫とペンギンの両方が起動し、トレイアイコンも表示されます。
 
-| 操作 | 動作 |
+## 操作
+
+| 操作 | 内容 |
 | --- | --- |
-| トレイアイコンをダブルクリック | フォーカスを奪わずにマスコットを再表示 |
+| トレイアイコンをダブルクリック | すべてのマスコットウィンドウをフォーカスを奪わずに再表示 |
 
-## 🪟 トレイメニュー
+## トレイメニュー
 
 | メニュー | 内容 |
 | --- | --- |
-| `Show` | トレイに隠れたマスコットを再表示 |
+| `Show` | トレイに隠れているマスコットを再表示 |
 | `Start with Windows` / `Start at Login` | 対応 OS でログイン時起動を設定 |
-| `Running Mode` / `Idle Mode` / `Random Mode` | マスコットの挙動を即時変更 |
-| `Speed: Fast` / `Medium` / `Slow` | 速度を `8`、`5`、`2` に設定 |
-| `Show Background` | 背景イラストの表示を切り替え |
+| `Running Mode` / `Idle Mode` / `Random Mode` / `Codex Mode` | マスコットの挙動を即時切り替え。`Codex Mode` は `.codex/state_5.sqlite` をポーリングして速度を調整 |
+| `Speed: Fast` / `Medium` / `Slow` | 共通の基準速度を `8` / `5` / `2` に設定し、その上で各マスコットの速度係数を適用 |
+| `Show Background` | 背景イラストの表示切り替え |
 | `Quit` | アプリを完全終了 |
 
-## 📚 ドキュメント
+## Windows 実行ファイル
+
+`npm run build:win` の後は、主に次の 2 つを使います。
+
+- ポータブル実行ファイル: `dist/Mitarashi Desktop Pet <version>.exe`
+- 展開済みアプリ: `dist/win-unpacked/Mitarashi Desktop Pet.exe`
+
+展開済み版はパッケージ後の挙動確認に便利で、ポータブル版はそのまま配布したり実行したりしやすい形式です。
+
+## ドキュメント
 
 - 公開ドキュメント: [sunwood-ai-labs.github.io/desktop-pet-mitarashi](https://sunwood-ai-labs.github.io/desktop-pet-mitarashi/)
 - ローカルプレビュー:
@@ -65,37 +77,44 @@ npm run docs:install
 npm run docs:dev
 ```
 
-## 🛠️ 開発
+## 開発
 
 ```bash
-# デスクトップアプリのビルド
+# デスクトップアプリをビルド
 npm run build:win
 npm run build:mac
 npm run build:linux
 
-# ドキュメントサイトのビルド
+# ドキュメントサイトをビルド
 npm run docs:build
 ```
 
-ローカルビルドでは、生成したいプラットフォームに対応するコマンドを使ってください。特に macOS / Windows 向け成果物は、それぞれの OS 上でのビルドが最も確実です。
+ローカル開発では、Windows 向け成果物は Windows 上、macOS 向け成果物は macOS 上でビルドするのが最も安定します。
 
-リリース用ヘッダー画像は、同梱の Python スクリプトで再生成できます。
+リリース用ヘッダー画像は、付属の Python スクリプトで再生成できます。
 
 ```bash
 uv run python scripts/generate_release_header.py --version 0.2.0 --output assets/release-header.svg
 ```
 
-## 📦 リリースフロー
+## 開発者メモ
 
-- `v*` 形式のタグを push すると、GitHub Actions が各プラットフォーム向けビルドを実行します。
-- CI 実行時にタグ名から `package.json` のバージョンを同期し、成果物の版番号を揃えます。
-- ビルド完了後、成果物は GitHub Release に自動で添付されます。
-- VitePress ドキュメントは `main` ブランチから GitHub Pages にデプロイされます。
+- `main.js` では `MASCOT_WINDOW_CONFIGS` を使って、マスコットごとに `BrowserWindow` を 1 つずつ生成しています。
+- 各ウィンドウは `index.html` を `?mascot=cat` や `?mascot=penguin` のようなクエリ付きで読み込みます。
+- レンダラーはそれぞれ独自の外周パス、現在位置、曲がり角、速度係数を持つため、2 体が別々に曲がります。
+- トレイからのモード変更や速度変更は、両方のマスコットへまとめて配信されます。
 
-## 🤝 コントリビュート
+## リリースフロー
 
-参加方法は [CONTRIBUTING.md](./CONTRIBUTING.md) にまとめています。Issue と Pull Request を歓迎します。
+- `v*` 形式のタグ push で GitHub Actions がマルチプラットフォームビルドを実行します。
+- CI 中にタグのバージョンを `package.json` へ反映し、成果物のバージョンを揃えます。
+- ビルド完了後、成果物は GitHub Release へ自動添付されます。
+- VitePress ドキュメントは `main` ブランチから GitHub Pages へ公開されます。
 
-## 📄 ライセンス
+## コントリビュート
 
-このプロジェクトは [MIT License](./LICENSE) で公開しています。
+詳細は [CONTRIBUTING.md](./CONTRIBUTING.md) を参照してください。Issue や Pull Request を歓迎します。
+
+## ライセンス
+
+このプロジェクトは [MIT License](./LICENSE) のもとで公開されています。
