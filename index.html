@@ -96,11 +96,71 @@
     let travelDirection = COUNTER_CLOCKWISE;
     let displayBounds = { x: 0, y: 0, width: 0, height: 0 };
 
+    function toFiniteNumber(value, fallback = 0) {
+      const numericValue = Number(value);
+      return Number.isFinite(numericValue) ? numericValue : fallback;
+    }
+
     function getWindowSize() {
       return {
-        width: window.innerWidth,
-        height: window.innerHeight
+        width: Math.max(
+          1,
+          toFiniteNumber(window.innerWidth, 0)
+            || toFiniteNumber(document.documentElement?.clientWidth, 0)
+            || toFiniteNumber(window.outerWidth, mascotConfig.width + (STAGE_PADDING * 2))
+        ),
+        height: Math.max(
+          1,
+          toFiniteNumber(window.innerHeight, 0)
+            || toFiniteNumber(document.documentElement?.clientHeight, 0)
+            || toFiniteNumber(window.outerHeight, mascotConfig.height + (STAGE_PADDING * 2))
+        )
       };
+    }
+
+    function getFallbackDisplayBounds() {
+      const windowSize = getWindowSize();
+
+      return {
+        x: toFiniteNumber(window.screenX, 0),
+        y: toFiniteNumber(window.screenY, 0),
+        width: Math.max(
+          1,
+          toFiniteNumber(window.screen?.availWidth, 0)
+            || toFiniteNumber(window.screen?.width, 0)
+            || windowSize.width
+        ),
+        height: Math.max(
+          1,
+          toFiniteNumber(window.screen?.availHeight, 0)
+            || toFiniteNumber(window.screen?.height, 0)
+            || windowSize.height
+        )
+      };
+    }
+
+    function sanitizeDisplayBounds(nextBounds) {
+      const fallbackBounds = getFallbackDisplayBounds();
+
+      return {
+        x: toFiniteNumber(nextBounds?.x, fallbackBounds.x),
+        y: toFiniteNumber(nextBounds?.y, fallbackBounds.y),
+        width: Math.max(1, toFiniteNumber(nextBounds?.width, fallbackBounds.width)),
+        height: Math.max(1, toFiniteNumber(nextBounds?.height, fallbackBounds.height))
+      };
+    }
+
+    function setWindowPositionSafely(x, y) {
+      const nextX = toFiniteNumber(x, NaN);
+      const nextY = toFiniteNumber(y, NaN);
+
+      if (!Number.isFinite(nextX) || !Number.isFinite(nextY)) {
+        console.warn('Skipped invalid mascot position update', { mascotId, x, y });
+        return false;
+      }
+
+      window.electronAPI.setWindowPosition(nextX, nextY);
+      return true;
     }
 
     function getDisplayedMode() {
@@ -136,7 +196,13 @@
     }
 
     async function updateDisplayBounds() {
-      displayBounds = await window.electronAPI.getDisplayBounds();
+      try {
+        displayBounds = sanitizeDisplayBounds(await window.electronAPI.getDisplayBounds());
+      } catch (error) {
+        console.error('Failed to read display bounds', error);
+        displayBounds = sanitizeDisplayBounds(displayBounds);
+      }
+
       return displayBounds;
     }
 
@@ -154,10 +220,11 @@
 
     function getTrackMetrics() {
       const windowSize = getWindowSize();
-      const minX = displayBounds.x - EDGE_OVERHANG;
-      const maxX = displayBounds.x + displayBounds.width - windowSize.width + EDGE_OVERHANG;
-      const minY = displayBounds.y - EDGE_OVERHANG;
-      const maxY = displayBounds.y + displayBounds.height - windowSize.height + EDGE_OVERHANG;
+      const safeDisplayBounds = sanitizeDisplayBounds(displayBounds);
+      const minX = safeDisplayBounds.x - EDGE_OVERHANG;
+      const maxX = safeDisplayBounds.x + safeDisplayBounds.width - windowSize.width + EDGE_OVERHANG;
+      const minY = safeDisplayBounds.y - EDGE_OVERHANG;
+      const maxY = safeDisplayBounds.y + safeDisplayBounds.height - windowSize.height + EDGE_OVERHANG;
       const spanX = Math.max(maxX - minX, 1);
       const spanY = Math.max(maxY - minY, 1);
 
@@ -329,7 +396,7 @@
       currentEdge = nearestCandidate.edge;
       pathOffset = normalizeOffset(nearestCandidate.offset, track.perimeter);
       applyMascotPose();
-      window.electronAPI.setWindowPosition(currentX, currentY);
+      setWindowPositionSafely(currentX, currentY);
     }
 
     async function preparePathFromCurrentPosition() {
@@ -345,7 +412,7 @@
       currentX = nextPosition.x;
       currentY = nextPosition.y;
       applyMascotPose();
-      window.electronAPI.setWindowPosition(currentX, currentY);
+      setWindowPositionSafely(currentX, currentY);
     }
 
     function enterRandomMode() {
@@ -499,8 +566,8 @@
     setTimeout(async () => {
       await updateDisplayBounds();
       const position = await window.electronAPI.getWindowPosition();
-      currentX = position.x;
-      currentY = position.y;
+      currentX = toFiniteNumber(position?.x, getFallbackDisplayBounds().x);
+      currentY = toFiniteNumber(position?.y, getFallbackDisplayBounds().y);
       snapToNearestEdge();
       updateImage();
       void startAutoWalk();

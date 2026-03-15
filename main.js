@@ -187,6 +187,11 @@ function applyMascotWindowBehavior(targetWindow) {
   targetWindow.setFocusable(false);
 }
 
+function toFiniteInteger(value) {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? Math.round(numericValue) : null;
+}
+
 function revealMascotWindow(targetWindow) {
   if (!targetWindow || targetWindow.isDestroyed()) {
     return;
@@ -482,7 +487,19 @@ ipcMain.on('set-window-position', (event, { x, y }) => {
     return;
   }
 
-  targetWindow.setPosition(Math.round(x), Math.round(y));
+  const nextX = toFiniteInteger(x);
+  const nextY = toFiniteInteger(y);
+
+  if (nextX === null || nextY === null) {
+    console.warn('Ignored invalid mascot window position update', {
+      mascotId: targetWindow.webContents.getURL(),
+      x,
+      y
+    });
+    return;
+  }
+
+  targetWindow.setPosition(nextX, nextY);
   applyMascotWindowBehavior(targetWindow);
 });
 
