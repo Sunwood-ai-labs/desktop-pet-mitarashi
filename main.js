@@ -599,7 +599,6 @@ ipcMain.on('set-window-position', (event, payload, y) => {
 
     const safePosition = getSafeMascotWindowPosition(targetWindow, nextX, nextY);
     targetWindow.setPosition(safePosition.x, safePosition.y);
-    applyMascotWindowBehavior(targetWindow);
   } catch (error) {
     console.error('Failed to handle mascot window position update', {
       mascotId: targetWindow && !targetWindow.isDestroyed()
