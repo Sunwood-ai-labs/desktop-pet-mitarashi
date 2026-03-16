@@ -6,6 +6,8 @@ const STARTUP_FLAG = '--launch-at-login';
 const EDGE_OVERHANG = 24;
 const ALWAYS_ON_TOP_LEVEL = 'screen-saver';
 const CODEX_ACTIVITY_WINDOW_SECONDS = 180;
+const INT32_MIN = -2147483648;
+const INT32_MAX = 2147483647;
 const MASCOT_WINDOW_CONFIGS = [
   {
     id: 'cat',
@@ -27,6 +29,11 @@ let backgroundWindow = null;
 let tray = null;
 let isBackgroundVisible = false;
 let currentMode = 'running';
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+
+if (!hasSingleInstanceLock) {
+  app.quit();
+}
 
 function getCodexStateDatabasePath() {
   const codexHome = process.env.CODEX_HOME || path.join(app.getPath('home'), '.codex');
@@ -189,7 +196,76 @@ function applyMascotWindowBehavior(targetWindow) {
 
 function toFiniteInteger(value) {
   const numericValue = Number(value);
-  return Number.isFinite(numericValue) ? Math.round(numericValue) : null;
+
+  if (!Number.isFinite(numericValue)) {
+    return null;
+  }
+
+  const roundedValue = Math.round(numericValue);
+
+  if (!Number.isSafeInteger(roundedValue)) {
+    return null;
+  }
+
+  if (roundedValue === 0) {
+    return 0;
+  }
+
+  return Math.min(INT32_MAX, Math.max(INT32_MIN, roundedValue));
+}
+
+function clamp(value, min, max) {
+  const lowerBound = Math.min(min, max);
+  const upperBound = Math.max(min, max);
+  return Math.min(Math.max(value, lowerBound), upperBound);
+}
+
+function getWindowPositionPayload(payload, y) {
+  if (payload && typeof payload === 'object') {
+    return {
+      x: payload.x,
+      y: payload.y
+    };
+  }
+
+  return {
+    x: payload,
+    y
+  };
+}
+
+function getVirtualDisplayBounds() {
+  const displays = screen.getAllDisplays();
+
+  if (displays.length === 0) {
+    return screen.getPrimaryDisplay().bounds;
+  }
+
+  const left = Math.min(...displays.map((display) => display.bounds.x));
+  const top = Math.min(...displays.map((display) => display.bounds.y));
+  const right = Math.max(...displays.map((display) => display.bounds.x + display.bounds.width));
+  const bottom = Math.max(...displays.map((display) => display.bounds.y + display.bounds.height));
+
+  return {
+    x: left,
+    y: top,
+    width: Math.max(1, right - left),
+    height: Math.max(1, bottom - top)
+  };
+}
+
+function getSafeMascotWindowPosition(targetWindow, x, y) {
+  const [windowWidth, windowHeight] = targetWindow.getSize();
+  const virtualBounds = getVirtualDisplayBounds();
+  const minX = virtualBounds.x - EDGE_OVERHANG;
+  const minY = virtualBounds.y - EDGE_OVERHANG;
+  const maxX = virtualBounds.x + virtualBounds.width - windowWidth + EDGE_OVERHANG;
+  const maxY = virtualBounds.y + virtualBounds.height - windowHeight + EDGE_OVERHANG;
+
+  return {
+    x: clamp(x, minX, maxX),
+    y: clamp(y, minY, maxY)
+  };
 }
 
 function revealMascotWindow(targetWindow) {
@@ -480,27 +556,59 @@ app.on('window-all-closed', (event) => {
   event.preventDefault();
 });
 
-ipcMain.on('set-window-position', (event, { x, y }) => {
-  const targetWindow = BrowserWindow.fromWebContents(event.sender);
+app.on('second-instance', (event, commandLine) => {
+  event.preventDefault();
 
-  if (!targetWindow || targetWindow.isDestroyed()) {
+  if (commandLine.includes(STARTUP_FLAG)) {
     return;
   }
 
-  const nextX = toFiniteInteger(x);
-  const nextY = toFiniteInteger(y);
-
-  if (nextX === null || nextY === null) {
-    console.warn('Ignored invalid mascot window position update', {
-      mascotId: targetWindow.webContents.getURL(),
-      x,
-      y
+  if (!app.isReady()) {
+    app.whenReady().then(() => {
+      showMascotWindows();
     });
     return;
   }
 
-  targetWindow.setPosition(nextX, nextY);
-  applyMascotWindowBehavior(targetWindow);
+  showMascotWindows();
+});
+
+ipcMain.on('set-window-position', (event, payload, y) => {
+  let targetWindow = null;
+  let positionPayload = null;
+
+  try {
+    targetWindow = BrowserWindow.fromWebContents(event.sender);
+
+    if (!targetWindow || targetWindow.isDestroyed()) {
+      return;
+    }
+
+    positionPayload = getWindowPositionPayload(payload, y);
+
+    const nextX = toFiniteInteger(positionPayload.x);
+    const nextY = toFiniteInteger(positionPayload.y);
+
+    if (nextX === null || nextY === null) {
+      console.warn('Ignored invalid mascot window position update', {
+        mascotId: targetWindow.webContents.getURL(),
+        payload: positionPayload
+      });
+      return;
+    }
+
+    const safePosition = getSafeMascotWindowPosition(targetWindow, nextX, nextY);
+    targetWindow.setPosition(safePosition.x, safePosition.y);
+    applyMascotWindowBehavior(targetWindow);
+  } catch (error) {
+    console.error('Failed to handle mascot window position update', {
+      mascotId: targetWindow && !targetWindow.isDestroyed()
+        ? targetWindow.webContents.getURL()
+        : null,
+      payload: positionPayload ?? getWindowPositionPayload(payload, y),
+      error: error?.stack || error?.message || String(error)
+    });
+  }
 });
 
 ipcMain.handle('get-window-position', (event) => {

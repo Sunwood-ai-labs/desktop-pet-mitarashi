@@ -46,7 +46,7 @@
     "productName": "Mitarashi Desktop Pet",
     "directories": {
       "output": "dist",
-      "buildResources": "assets"
+      "buildResources": "build"
     },
     "icon": "assets/app-icon.png",
     "files": [
