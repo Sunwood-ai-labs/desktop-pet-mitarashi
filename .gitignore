@@ -32,3 +32,7 @@ release/
 docs/.vitepress/cache
 docs/.vitepress/dist
 dist-polish
+
+# Local animation packs
+animation-packs/*
+!animation-packs/README.md

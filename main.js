@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, screen, Tray, Menu, nativeImage } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const { loadAnimationPackCatalog } = require('./animation-pack-loader');
 
 const STARTUP_FLAG = '--launch-at-login';
 const EDGE_OVERHANG = 24;
@@ -30,6 +31,12 @@ let backgroundWindow = null;
 let tray = null;
 let isBackgroundVisible = false;
 let currentMode = DEFAULT_MODE;
+let animationPackCatalog = {
+  packRoots: [],
+  mascots: {},
+  loadedPacks: [],
+  diagnostics: []
+};
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 
 if (!hasSingleInstanceLock) {
@@ -156,6 +163,29 @@ function shouldStartHidden() {
   }
 
   return process.argv.includes(STARTUP_FLAG);
+}
+
+function refreshAnimationPackCatalog() {
+  animationPackCatalog = loadAnimationPackCatalog(app);
+
+  animationPackCatalog.diagnostics.forEach(({ level, message }) => {
+    if (level === 'warn') {
+      console.warn(message);
+      return;
+    }
+
+    console.log(message);
+  });
+
+  return animationPackCatalog;
+}
+
+function getMascotAnimationPackConfig(mascotId) {
+  if (typeof mascotId !== 'string' || !mascotId.trim()) {
+    return null;
+  }
+
+  return animationPackCatalog.mascots[mascotId.trim()] || null;
 }
 
 function getWindowDisplay(targetWindow) {
@@ -540,6 +570,7 @@ function updateTrayMenu() {
 app.whenReady().then(async () => {
   const startHidden = shouldStartHidden();
 
+  refreshAnimationPackCatalog();
   await createTray();
   ensureMascotWindows({ show: !startHidden });
 
@@ -629,4 +660,8 @@ ipcMain.handle('get-display-bounds', (event) => {
 
 ipcMain.handle('get-codex-task-status', () => {
   return getCodexTaskStatus();
+});
+
+ipcMain.handle('get-mascot-animation-pack-config', (event, mascotId) => {
+  return getMascotAnimationPackConfig(mascotId);
 });

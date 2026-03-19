@@ -62,39 +62,61 @@
     const CODEX_POLL_INTERVAL_MS = 5000;
     const CODEX_ACTIVITY_SPEED_CAP = 18;
     const DEFAULT_MODE = 'random';
+    const DEFAULT_ANIMATION_INTERVAL_MS = {
+      min: 9000,
+      max: 13000
+    };
     const STAGE_PADDING = 8;
-    const IDLE_ANIMATION_MIN_MS = 9000;
-    const IDLE_ANIMATION_MAX_MS = 13000;
     const MASCOT_CONFIGS = {
       cat: {
-        runningSrc: 'assets/running_cat.webp',
-        idleSrc: 'assets/mitarashi.webp',
         width: 120,
         height: 84,
         speedMultiplier: 1.05,
-        alt: 'Running cat'
+        alt: 'Cat mascot',
+        animations: {
+          running: {
+            files: ['assets/running_cat.webp'],
+            selection: 'fixed'
+          },
+          idle: {
+            files: ['assets/mitarashi.webp'],
+            selection: 'fixed'
+          }
+        }
       },
       penguin: {
-        runningSrc: 'assets/penguin_running.webp',
-        idleSrc: 'assets/penguin_idle.png',
-        idleAnimationSrcs: [
-          'assets/penguin_tiles/tile_01_animated.webp',
-          'assets/penguin_tiles/tile_02_animated.webp',
-          'assets/penguin_tiles/tile_03_animated.webp',
-          'assets/penguin_tiles/tile_04_animated.webp',
-          'assets/penguin_tiles/tile_05_animated.webp',
-          'assets/penguin_tiles/tile_06_animated.webp',
-          'assets/penguin_tiles/tile_07_animated.webp',
-          'assets/penguin_tiles/tile_08_animated.webp',
-          'assets/penguin_tiles/tile_09_animated.webp'
-        ],
         width: 84,
         height: 84,
         speedMultiplier: 0.9,
-        alt: 'Running penguin'
+        alt: 'Penguin mascot',
+        animations: {
+          running: {
+            files: ['assets/penguin_running.webp'],
+            selection: 'fixed'
+          },
+          idle: {
+            files: [
+              'assets/penguin_idle.png',
+              'assets/penguin_tiles/tile_01_animated.webp',
+              'assets/penguin_tiles/tile_02_animated.webp',
+              'assets/penguin_tiles/tile_03_animated.webp',
+              'assets/penguin_tiles/tile_04_animated.webp',
+              'assets/penguin_tiles/tile_05_animated.webp',
+              'assets/penguin_tiles/tile_06_animated.webp',
+              'assets/penguin_tiles/tile_07_animated.webp',
+              'assets/penguin_tiles/tile_08_animated.webp',
+              'assets/penguin_tiles/tile_09_animated.webp'
+            ],
+            selection: 'random',
+            intervalMs: {
+              min: 9000,
+              max: 13000
+            }
+          }
+        }
       }
     };
-    const mascotConfig = MASCOT_CONFIGS[mascotId] || MASCOT_CONFIGS.cat;
+    let mascotConfig = null;
 
     let mode = DEFAULT_MODE;
     let effectiveMode = 'running';
@@ -109,9 +131,131 @@
     let currentEdge = 'bottom';
     let travelDirection = COUNTER_CLOCKWISE;
     let displayBounds = { x: 0, y: 0, width: 0, height: 0 };
-    let idleAnimationTimer = null;
-    let currentIdleAnimationSrc = null;
+    let animationTimer = null;
+    let currentAnimationSrcs = {
+      idle: null,
+      running: null
+    };
     let lastDisplayedMode = null;
+
+    function uniqueStrings(values) {
+      return [...new Set(
+        values.filter((value) => typeof value === 'string' && value.trim())
+      )];
+    }
+
+    function normalizeIntervalMs(value, fallback = null) {
+      if (value === undefined || value === null) {
+        return fallback ? { ...fallback } : null;
+      }
+
+      const rawValue = typeof value === 'number' || typeof value === 'string'
+        ? { min: value, max: value }
+        : value;
+
+      if (!rawValue || typeof rawValue !== 'object') {
+        return fallback ? { ...fallback } : null;
+      }
+
+      const minValue = Math.round(Number(rawValue.min ?? rawValue.minimum ?? rawValue.from ?? rawValue.value));
+      const maxValue = Math.round(Number(rawValue.max ?? rawValue.maximum ?? rawValue.to ?? rawValue.value ?? minValue));
+
+      if (!Number.isFinite(minValue) || !Number.isFinite(maxValue) || minValue <= 0 || maxValue <= 0) {
+        return fallback ? { ...fallback } : null;
+      }
+
+      return {
+        min: Math.min(minValue, maxValue),
+        max: Math.max(minValue, maxValue)
+      };
+    }
+
+    function createAnimationModeConfig(rawModeConfig, fallback = null) {
+      const fallbackFiles = Array.isArray(fallback?.files) ? fallback.files : [];
+      const files = uniqueStrings([
+        ...fallbackFiles,
+        ...(Array.isArray(rawModeConfig?.files) ? rawModeConfig.files : [])
+      ]);
+      const requestedSelection = typeof rawModeConfig?.selection === 'string'
+        ? rawModeConfig.selection.trim().toLowerCase()
+        : '';
+      const fallbackSelection = typeof fallback?.selection === 'string'
+        ? fallback.selection
+        : '';
+      let selection = 'fixed';
+
+      if (requestedSelection === 'random' || requestedSelection === 'fixed') {
+        selection = requestedSelection;
+      } else if (fallbackSelection === 'random' || fallbackSelection === 'fixed') {
+        selection = fallbackSelection;
+      } else if (files.length > 1) {
+        selection = 'random';
+      }
+
+      return {
+        files,
+        selection,
+        intervalMs: selection === 'random'
+          ? normalizeIntervalMs(rawModeConfig?.intervalMs, fallback?.intervalMs || DEFAULT_ANIMATION_INTERVAL_MS)
+          : null
+      };
+    }
+
+    function createMascotConfig(baseConfig) {
+      return {
+        ...baseConfig,
+        animations: {
+          running: createAnimationModeConfig(baseConfig.animations?.running),
+          idle: createAnimationModeConfig(baseConfig.animations?.idle)
+        }
+      };
+    }
+
+    function mergeAnimationPackConfig(baseConfig, packConfig) {
+      const mergedConfig = createMascotConfig(baseConfig);
+
+      if (!packConfig || typeof packConfig !== 'object' || !packConfig.animationModes) {
+        return mergedConfig;
+      }
+
+      ['running', 'idle'].forEach((modeName) => {
+        const externalMode = packConfig.animationModes[modeName];
+
+        if (!externalMode || typeof externalMode !== 'object') {
+          return;
+        }
+
+        const baseMode = mergedConfig.animations[modeName];
+        const externalFiles = uniqueStrings(Array.isArray(externalMode.files) ? externalMode.files : []);
+        const files = uniqueStrings([
+          ...(externalMode.replaceDefault ? [] : baseMode.files),
+          ...externalFiles
+        ]);
+
+        if (files.length === 0) {
+          return;
+        }
+
+        const requestedSelection = typeof externalMode.selection === 'string'
+          ? externalMode.selection.trim().toLowerCase()
+          : '';
+        const selection = requestedSelection === 'random' || requestedSelection === 'fixed'
+          ? requestedSelection
+          : (baseMode.selection || (files.length > 1 ? 'random' : 'fixed'));
+
+        mergedConfig.animations[modeName] = {
+          files,
+          selection,
+          intervalMs: selection === 'random'
+            ? normalizeIntervalMs(externalMode.intervalMs, baseMode.intervalMs || DEFAULT_ANIMATION_INTERVAL_MS)
+            : null
+        };
+      });
+
+      return mergedConfig;
+    }
+
+    mascotConfig = createMascotConfig(MASCOT_CONFIGS[mascotId] || MASCOT_CONFIGS.cat);
 
     function toFiniteNumber(value, fallback = 0) {
       const numericValue = Number(value);
@@ -316,51 +460,61 @@
       }
     }
 
-    function usesIdleAnimationVariants() {
-      return Array.isArray(mascotConfig.idleAnimationSrcs) && mascotConfig.idleAnimationSrcs.length > 0;
+    function getAnimationModeConfig(modeName) {
+      return mascotConfig.animations?.[modeName] || mascotConfig.animations?.idle;
     }
 
-    function clearIdleAnimationTimer() {
-      if (idleAnimationTimer) {
-        clearTimeout(idleAnimationTimer);
-        idleAnimationTimer = null;
+    function clearAnimationTimer() {
+      if (animationTimer) {
+        clearTimeout(animationTimer);
+        animationTimer = null;
       }
     }
 
-    function getNextIdleAnimationSrc() {
-      if (!usesIdleAnimationVariants()) {
-        return mascotConfig.idleSrc;
+    function usesRandomAnimationSelection(modeName) {
+      const animationModeConfig = getAnimationModeConfig(modeName);
+      return animationModeConfig?.selection === 'random' && animationModeConfig.files.length > 1;
+    }
+
+    function getNextAnimationSrc(modeName) {
+      const animationModeConfig = getAnimationModeConfig(modeName);
+      const animationFiles = Array.isArray(animationModeConfig?.files) ? animationModeConfig.files : [];
+
+      if (animationFiles.length === 0) {
+        return '';
       }
 
-      if (mascotConfig.idleAnimationSrcs.length === 1) {
-        return mascotConfig.idleAnimationSrcs[0];
+      if (animationFiles.length === 1 || animationModeConfig.selection !== 'random') {
+        return animationFiles[0];
       }
 
-      const candidateAnimations = mascotConfig.idleAnimationSrcs.filter((src) => src !== currentIdleAnimationSrc);
+      const currentAnimationSrc = currentAnimationSrcs[modeName];
+      const candidateAnimations = animationFiles.filter((src) => src !== currentAnimationSrc);
       const randomIndex = Math.floor(Math.random() * candidateAnimations.length);
-      return candidateAnimations[randomIndex] || mascotConfig.idleAnimationSrcs[0];
+      return candidateAnimations[randomIndex] || animationFiles[0];
     }
 
-    function scheduleNextIdleAnimationSwitch() {
-      clearIdleAnimationTimer();
+    function getAnimationSwitchDelay(modeName) {
+      const intervalMs = getAnimationModeConfig(modeName)?.intervalMs || DEFAULT_ANIMATION_INTERVAL_MS;
+      return Math.round(intervalMs.min + (Math.random() * (intervalMs.max - intervalMs.min)));
+    }
 
-      if (getDisplayedMode() !== 'idle' || !usesIdleAnimationVariants()) {
+    function scheduleNextAnimationSwitch(modeName) {
+      clearAnimationTimer();
+
+      if (getDisplayedMode() !== modeName || !usesRandomAnimationSelection(modeName)) {
         return;
       }
 
-      const nextDelay = Math.round(
-        IDLE_ANIMATION_MIN_MS + (Math.random() * (IDLE_ANIMATION_MAX_MS - IDLE_ANIMATION_MIN_MS))
-      );
-
-      idleAnimationTimer = setTimeout(() => {
-        if (getDisplayedMode() !== 'idle') {
+      animationTimer = setTimeout(() => {
+        if (getDisplayedMode() !== modeName) {
           return;
         }
 
-        currentIdleAnimationSrc = getNextIdleAnimationSrc();
-        mascot.src = currentIdleAnimationSrc;
-        scheduleNextIdleAnimationSwitch();
-      }, nextDelay);
+        currentAnimationSrcs[modeName] = getNextAnimationSrc(modeName);
+        mascot.src = currentAnimationSrcs[modeName];
+        scheduleNextAnimationSwitch(modeName);
+      }, getAnimationSwitchDelay(modeName));
     }
 
     function applyMascotPose(edge = currentEdge) {
@@ -398,26 +552,28 @@
     function updateImage() {
       const displayedMode = getDisplayedMode();
       const isRunning = displayedMode === 'running';
-      const justEnteredIdle = displayedMode === 'idle' && lastDisplayedMode !== 'idle';
+      const justEnteredMode = displayedMode !== lastDisplayedMode;
+      const animationModeConfig = getAnimationModeConfig(displayedMode);
+      const fallbackSrc = animationModeConfig?.files?.[0] || '';
 
       mascot.alt = mascotConfig.alt;
       mascot.style.width = `${mascotConfig.width}px`;
       mascot.style.height = `${mascotConfig.height}px`;
       mascot.classList.toggle('idle', !isRunning);
 
-      if (!isRunning && usesIdleAnimationVariants()) {
-        if (justEnteredIdle || !currentIdleAnimationSrc) {
-          currentIdleAnimationSrc = getNextIdleAnimationSrc();
+      if (usesRandomAnimationSelection(displayedMode)) {
+        if (justEnteredMode || !currentAnimationSrcs[displayedMode]) {
+          currentAnimationSrcs[displayedMode] = getNextAnimationSrc(displayedMode);
         }
 
-        mascot.src = currentIdleAnimationSrc;
-        if (justEnteredIdle || !idleAnimationTimer) {
-          scheduleNextIdleAnimationSwitch();
+        mascot.src = currentAnimationSrcs[displayedMode];
+        if (justEnteredMode || !animationTimer) {
+          scheduleNextAnimationSwitch(displayedMode);
         }
       } else {
-        clearIdleAnimationTimer();
-        currentIdleAnimationSrc = null;
-        mascot.src = isRunning ? mascotConfig.runningSrc : mascotConfig.idleSrc;
+        clearAnimationTimer();
+        currentAnimationSrcs[displayedMode] = fallbackSrc;
+        mascot.src = fallbackSrc;
       }
 
       lastDisplayedMode = displayedMode;
@@ -648,7 +804,28 @@
       manualWalkSpeed = newSpeed;
     });
 
+    async function loadMascotAnimationPackConfig() {
+      try {
+        const packConfig = await window.electronAPI.getMascotAnimationPackConfig(mascotId);
+
+        if (!packConfig) {
+          return;
+        }
+
+        mascotConfig = mergeAnimationPackConfig(mascotConfig, packConfig);
+        clearAnimationTimer();
+        currentAnimationSrcs = {
+          idle: null,
+          running: null
+        };
+        updateImage();
+      } catch (error) {
+        console.error('Failed to load mascot animation pack config', error);
+      }
+    }
+
     updateImage();
+    void loadMascotAnimationPackConfig();
 
     setTimeout(async () => {
       await updateDisplayBounds();

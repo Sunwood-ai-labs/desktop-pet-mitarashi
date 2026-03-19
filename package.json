@@ -68,5 +68,8 @@
       "target": "AppImage",
       "icon": "assets/app-icon.png"
     }
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.1"
   }
 }

@@ -67,6 +67,45 @@ After `npm run build:win`, the main Windows outputs are:
 
 The unpacked executable is useful for debugging packaged behavior, while the portable `.exe` is the easiest file to share or run directly.
 
+## Animation Packs
+
+You can extend the built-in `cat` and `penguin` animations by dropping a `pack.yaml` file plus image assets into an animation-pack folder.
+
+Default discovery roots:
+
+- Repo-local packs: `./animation-packs/<your-pack>/pack.yaml`
+- Per-user packs: Electron `userData/animation-packs`
+- Custom pack roots: `MITARASHI_ANIMATION_PACKS_DIR` (supports multiple paths separated by the platform delimiter)
+
+Minimal example:
+
+```yaml
+schema_version: 1
+id: penguin-soft-idle
+mascot: penguin
+animations:
+  idle:
+    directory: idle
+    recursive: true
+    extensions: [webp, png]
+    selection: random
+    interval_ms:
+      min: 9000
+      max: 13000
+```
+
+Supported scope:
+
+- `mascot`: `cat` or `penguin`
+- `animations`: `idle` and/or `running`
+- `file` / `files`: add one or more relative asset paths
+- `directory`: scan a relative directory for matching assets
+- `replace_default`: replace built-in assets instead of appending to them
+- `selection`: `fixed` or `random`
+- `interval_ms` / `switch_interval_ms`: random-switch timing
+
+All asset paths must stay inside the pack folder. Invalid packs are skipped with a warning in the Electron log. Restart the app after adding or changing a pack.
+
 ## Documentation
 
 - Project docs: [sunwood-ai-labs.github.io/desktop-pet-mitarashi](https://sunwood-ai-labs.github.io/desktop-pet-mitarashi/)
