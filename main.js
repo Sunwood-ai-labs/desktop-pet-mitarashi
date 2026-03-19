@@ -6,6 +6,7 @@ const STARTUP_FLAG = '--launch-at-login';
 const EDGE_OVERHANG = 24;
 const ALWAYS_ON_TOP_LEVEL = 'screen-saver';
 const CODEX_ACTIVITY_WINDOW_SECONDS = 180;
+const DEFAULT_MODE = 'random';
 const INT32_MIN = -2147483648;
 const INT32_MAX = 2147483647;
 const MASCOT_WINDOW_CONFIGS = [
@@ -28,7 +29,7 @@ const mascotWindows = new Map();
 let backgroundWindow = null;
 let tray = null;
 let isBackgroundVisible = false;
-let currentMode = 'running';
+let currentMode = DEFAULT_MODE;
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 
 if (!hasSingleInstanceLock) {

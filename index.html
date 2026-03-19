@@ -61,7 +61,10 @@
     const COUNTER_CLOCKWISE = -1;
     const CODEX_POLL_INTERVAL_MS = 5000;
     const CODEX_ACTIVITY_SPEED_CAP = 18;
+    const DEFAULT_MODE = 'random';
     const STAGE_PADDING = 8;
+    const IDLE_ANIMATION_MIN_MS = 9000;
+    const IDLE_ANIMATION_MAX_MS = 13000;
     const MASCOT_CONFIGS = {
       cat: {
         runningSrc: 'assets/running_cat.webp',
@@ -74,6 +77,17 @@
       penguin: {
         runningSrc: 'assets/penguin_running.webp',
         idleSrc: 'assets/penguin_idle.png',
+        idleAnimationSrcs: [
+          'assets/penguin_tiles/tile_01_animated.webp',
+          'assets/penguin_tiles/tile_02_animated.webp',
+          'assets/penguin_tiles/tile_03_animated.webp',
+          'assets/penguin_tiles/tile_04_animated.webp',
+          'assets/penguin_tiles/tile_05_animated.webp',
+          'assets/penguin_tiles/tile_06_animated.webp',
+          'assets/penguin_tiles/tile_07_animated.webp',
+          'assets/penguin_tiles/tile_08_animated.webp',
+          'assets/penguin_tiles/tile_09_animated.webp'
+        ],
         width: 84,
         height: 84,
         speedMultiplier: 0.9,
@@ -82,7 +96,7 @@
     };
     const mascotConfig = MASCOT_CONFIGS[mascotId] || MASCOT_CONFIGS.cat;
 
-    let mode = 'running';
+    let mode = DEFAULT_MODE;
     let effectiveMode = 'running';
     let randomTimer = null;
     let codexPollTimer = null;
@@ -95,6 +109,9 @@
     let currentEdge = 'bottom';
     let travelDirection = COUNTER_CLOCKWISE;
     let displayBounds = { x: 0, y: 0, width: 0, height: 0 };
+    let idleAnimationTimer = null;
+    let currentIdleAnimationSrc = null;
+    let lastDisplayedMode = null;
 
     function toFiniteNumber(value, fallback = 0) {
       const numericValue = Number(value);
@@ -299,6 +316,53 @@
       }
     }
 
+    function usesIdleAnimationVariants() {
+      return Array.isArray(mascotConfig.idleAnimationSrcs) && mascotConfig.idleAnimationSrcs.length > 0;
+    }
+
+    function clearIdleAnimationTimer() {
+      if (idleAnimationTimer) {
+        clearTimeout(idleAnimationTimer);
+        idleAnimationTimer = null;
+      }
+    }
+
+    function getNextIdleAnimationSrc() {
+      if (!usesIdleAnimationVariants()) {
+        return mascotConfig.idleSrc;
+      }
+
+      if (mascotConfig.idleAnimationSrcs.length === 1) {
+        return mascotConfig.idleAnimationSrcs[0];
+      }
+
+      const candidateAnimations = mascotConfig.idleAnimationSrcs.filter((src) => src !== currentIdleAnimationSrc);
+      const randomIndex = Math.floor(Math.random() * candidateAnimations.length);
+      return candidateAnimations[randomIndex] || mascotConfig.idleAnimationSrcs[0];
+    }
+
+    function scheduleNextIdleAnimationSwitch() {
+      clearIdleAnimationTimer();
+
+      if (getDisplayedMode() !== 'idle' || !usesIdleAnimationVariants()) {
+        return;
+      }
+
+      const nextDelay = Math.round(
+        IDLE_ANIMATION_MIN_MS + (Math.random() * (IDLE_ANIMATION_MAX_MS - IDLE_ANIMATION_MIN_MS))
+      );
+
+      idleAnimationTimer = setTimeout(() => {
+        if (getDisplayedMode() !== 'idle') {
+          return;
+        }
+
+        currentIdleAnimationSrc = getNextIdleAnimationSrc();
+        mascot.src = currentIdleAnimationSrc;
+        scheduleNextIdleAnimationSwitch();
+      }, nextDelay);
+    }
+
     function applyMascotPose(edge = currentEdge) {
       const movement = getMovementVector(edge);
       const windowSize = getWindowSize();
@@ -332,13 +396,31 @@
     }
 
     function updateImage() {
-      const isRunning = getDisplayedMode() === 'running';
+      const displayedMode = getDisplayedMode();
+      const isRunning = displayedMode === 'running';
+      const justEnteredIdle = displayedMode === 'idle' && lastDisplayedMode !== 'idle';
 
-      mascot.src = isRunning ? mascotConfig.runningSrc : mascotConfig.idleSrc;
       mascot.alt = mascotConfig.alt;
       mascot.style.width = `${mascotConfig.width}px`;
       mascot.style.height = `${mascotConfig.height}px`;
       mascot.classList.toggle('idle', !isRunning);
+
+      if (!isRunning && usesIdleAnimationVariants()) {
+        if (justEnteredIdle || !currentIdleAnimationSrc) {
+          currentIdleAnimationSrc = getNextIdleAnimationSrc();
+        }
+
+        mascot.src = currentIdleAnimationSrc;
+        if (justEnteredIdle || !idleAnimationTimer) {
+          scheduleNextIdleAnimationSwitch();
+        }
+      } else {
+        clearIdleAnimationTimer();
+        currentIdleAnimationSrc = null;
+        mascot.src = isRunning ? mascotConfig.runningSrc : mascotConfig.idleSrc;
+      }
+
+      lastDisplayedMode = displayedMode;
       applyMascotPose();
     }
 
@@ -416,6 +498,11 @@
     }
 
     function enterRandomMode() {
+      if (randomTimer) {
+        clearTimeout(randomTimer);
+        randomTimer = null;
+      }
+
       effectiveMode = 'running';
       scheduleNextSwitch();
       updateImage();
@@ -570,7 +657,23 @@
       currentY = toFiniteNumber(position?.y, getFallbackDisplayBounds().y);
       snapToNearestEdge();
       updateImage();
-      void startAutoWalk();
+
+      if (mode === 'random') {
+        enterRandomMode();
+        return;
+      }
+
+      if (mode === 'codex') {
+        await enterCodexMode();
+        return;
+      }
+
+      if (mode === 'running') {
+        void startAutoWalk();
+        return;
+      }
+
+      stopAutoWalk();
     }, 500);
   </script>
 </body>
