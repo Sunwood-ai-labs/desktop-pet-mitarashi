@@ -1,0 +1,8 @@
+schema_version: 1
+id: builtin-cat-default
+mascot: cat
+animations:
+  running:
+    file: running/running_cat.webp
+  idle:
+    file: idle/mitarashi.webp

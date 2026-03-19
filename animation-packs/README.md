@@ -1,5 +1,8 @@
 # Animation Packs
 
+The built-in cat and penguin packs live under `animation-packs/builtin/` and are tracked with the app.
+Any sibling folders you add here can extend or replace those bundled animations.
+
 Drop custom animation packs into a child folder under this directory:
 
 ```text

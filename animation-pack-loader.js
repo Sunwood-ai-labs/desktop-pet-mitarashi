@@ -7,6 +7,7 @@ const PACK_MANIFEST_NAMES = new Set(['pack.yaml', 'pack.yml']);
 const SUPPORTED_MASCOT_IDS = new Set(['cat', 'penguin']);
 const SUPPORTED_MODE_IDS = new Set(['idle', 'running']);
 const DEFAULT_DISCOVERED_EXTENSIONS = new Set(['.webp', '.gif', '.png', '.jpg', '.jpeg', '.avif']);
+const BUNDLED_PACKS_DIRECTORY_NAME = 'builtin';
 
 function isPlainObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -282,16 +283,22 @@ function getAnimationPackDirectories(app) {
     .split(path.delimiter)
     .map((directoryPath) => directoryPath.trim())
     .filter(Boolean);
+  const bundledPackDirectory = path.join(app.getAppPath(), 'animation-packs');
   const userDataPackDirectory = path.join(app.getPath('userData'), 'animation-packs');
 
   ensureDirectoryExists(userDataPackDirectory);
 
   const fallbackDirectories = [
-    userDataPackDirectory,
-    path.join(app.getAppPath(), 'animation-packs')
+    bundledPackDirectory,
+    userDataPackDirectory
   ];
 
-  return uniqueStrings([...configuredDirectories, ...fallbackDirectories].map((directoryPath) => path.resolve(directoryPath)));
+  return uniqueStrings([...fallbackDirectories, ...configuredDirectories].map((directoryPath) => path.resolve(directoryPath)));
+}
+
+function isBundledManifestPath(rootDirectoryPath, manifestPath) {
+  const relativePathSegments = path.relative(rootDirectoryPath, manifestPath).split(path.sep);
+  return relativePathSegments[0]?.toLowerCase() === BUNDLED_PACKS_DIRECTORY_NAME;
 }
 
 function findManifestPaths(rootDirectoryPath) {
@@ -321,7 +328,16 @@ function findManifestPaths(rootDirectoryPath) {
     });
   }
 
-  return manifestPaths.sort((firstPath, secondPath) => firstPath.localeCompare(secondPath));
+  return manifestPaths.sort((firstPath, secondPath) => {
+    const firstIsBundled = isBundledManifestPath(rootDirectoryPath, firstPath);
+    const secondIsBundled = isBundledManifestPath(rootDirectoryPath, secondPath);
+
+    if (firstIsBundled !== secondIsBundled) {
+      return firstIsBundled ? -1 : 1;
+    }
+
+    return firstPath.localeCompare(secondPath);
+  });
 }
 
 function mergePackIntoCatalog(catalog, pack) {

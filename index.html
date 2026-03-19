@@ -72,48 +72,13 @@
         width: 120,
         height: 84,
         speedMultiplier: 1.05,
-        alt: 'Cat mascot',
-        animations: {
-          running: {
-            files: ['assets/running_cat.webp'],
-            selection: 'fixed'
-          },
-          idle: {
-            files: ['assets/mitarashi.webp'],
-            selection: 'fixed'
-          }
-        }
+        alt: 'Cat mascot'
       },
       penguin: {
         width: 84,
         height: 84,
         speedMultiplier: 0.9,
-        alt: 'Penguin mascot',
-        animations: {
-          running: {
-            files: ['assets/penguin_running.webp'],
-            selection: 'fixed'
-          },
-          idle: {
-            files: [
-              'assets/penguin_idle.png',
-              'assets/penguin_tiles/tile_01_animated.webp',
-              'assets/penguin_tiles/tile_02_animated.webp',
-              'assets/penguin_tiles/tile_03_animated.webp',
-              'assets/penguin_tiles/tile_04_animated.webp',
-              'assets/penguin_tiles/tile_05_animated.webp',
-              'assets/penguin_tiles/tile_06_animated.webp',
-              'assets/penguin_tiles/tile_07_animated.webp',
-              'assets/penguin_tiles/tile_08_animated.webp',
-              'assets/penguin_tiles/tile_09_animated.webp'
-            ],
-            selection: 'random',
-            intervalMs: {
-              min: 9000,
-              max: 13000
-            }
-          }
-        }
+        alt: 'Penguin mascot'
       }
     };
     let mascotConfig = null;
@@ -137,6 +102,7 @@
       running: null
     };
     let lastDisplayedMode = null;
+    let mascotConfigReadyPromise = null;
 
     function uniqueStrings(values) {
       return [...new Set(
@@ -464,6 +430,10 @@
       return mascotConfig.animations?.[modeName] || mascotConfig.animations?.idle;
     }
 
+    function hasAnimationFiles(modeName) {
+      return (getAnimationModeConfig(modeName)?.files?.length || 0) > 0;
+    }
+
     function clearAnimationTimer() {
       if (animationTimer) {
         clearTimeout(animationTimer);
@@ -560,6 +530,14 @@
       mascot.style.width = `${mascotConfig.width}px`;
       mascot.style.height = `${mascotConfig.height}px`;
       mascot.classList.toggle('idle', !isRunning);
+
+      if (!hasAnimationFiles(displayedMode)) {
+        mascot.removeAttribute('src');
+        clearAnimationTimer();
+        lastDisplayedMode = displayedMode;
+        applyMascotPose();
+        return;
+      }
 
       if (usesRandomAnimationSelection(displayedMode)) {
         if (justEnteredMode || !currentAnimationSrcs[displayedMode]) {
@@ -770,6 +748,8 @@
     }
 
     window.electronAPI.onSetMode(async (newMode) => {
+      await ensureMascotAnimationPackConfigLoaded();
+
       if (mode === 'random' && newMode !== 'random') {
         exitRandomMode();
       }
@@ -809,6 +789,8 @@
         const packConfig = await window.electronAPI.getMascotAnimationPackConfig(mascotId);
 
         if (!packConfig) {
+          console.warn(`No bundled animation pack was found for mascot "${mascotId}"`);
+          updateImage();
           return;
         }
 
@@ -821,13 +803,20 @@
         updateImage();
       } catch (error) {
         console.error('Failed to load mascot animation pack config', error);
+        updateImage();
       }
     }
 
-    updateImage();
-    void loadMascotAnimationPackConfig();
+    function ensureMascotAnimationPackConfigLoaded() {
+      if (!mascotConfigReadyPromise) {
+        mascotConfigReadyPromise = loadMascotAnimationPackConfig();
+      }
+
+      return mascotConfigReadyPromise;
+    }
 
     setTimeout(async () => {
+      await ensureMascotAnimationPackConfigLoaded();
       await updateDisplayBounds();
       const position = await window.electronAPI.getWindowPosition();
       currentX = toFiniteNumber(position?.x, getFallbackDisplayBounds().x);
@@ -852,6 +841,8 @@
 
       stopAutoWalk();
     }, 500);
+
+    void ensureMascotAnimationPackConfigLoaded();
   </script>
 </body>
 </html>

@@ -36,3 +36,5 @@ dist-polish
 # Local animation packs
 animation-packs/*
 !animation-packs/README.md
+!animation-packs/builtin/
+!animation-packs/builtin/**

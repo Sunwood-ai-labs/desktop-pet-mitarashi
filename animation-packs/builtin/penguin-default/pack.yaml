@@ -1,0 +1,15 @@
+schema_version: 1
+id: builtin-penguin-default
+mascot: penguin
+animations:
+  running:
+    file: running/penguin_running.webp
+  idle:
+    files:
+      - idle/penguin_idle.png
+    directory: idle/tiles
+    extensions: [webp]
+    selection: random
+    interval_ms:
+      min: 9000
+      max: 13000
