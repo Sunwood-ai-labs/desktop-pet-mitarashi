@@ -6,6 +6,7 @@ const { loadAnimationPackCatalog } = require('./animation-pack-loader');
 const STARTUP_FLAG = '--launch-at-login';
 const EDGE_OVERHANG = 24;
 const ALWAYS_ON_TOP_LEVEL = 'screen-saver';
+const OVERLAP_FRONT_MASCOT_ID = 'cat';
 const CODEX_ACTIVITY_WINDOW_SECONDS = 180;
 const DEFAULT_MODE = 'random';
 const INT32_MIN = -2147483648;
@@ -206,6 +207,36 @@ function getMascotWindows() {
   return MASCOT_WINDOW_CONFIGS
     .map((config) => mascotWindows.get(config.id))
     .filter((targetWindow) => targetWindow && !targetWindow.isDestroyed());
+}
+
+function getMascotWindowById(mascotId) {
+  const targetWindow = mascotWindows.get(mascotId);
+  return targetWindow && !targetWindow.isDestroyed() ? targetWindow : null;
+}
+
+function doWindowBoundsOverlap(firstBounds, secondBounds) {
+  return firstBounds.x < secondBounds.x + secondBounds.width
+    && firstBounds.x + firstBounds.width > secondBounds.x
+    && firstBounds.y < secondBounds.y + secondBounds.height
+    && firstBounds.y + firstBounds.height > secondBounds.y;
+}
+
+// Keep a deterministic front window while transparent always-on-top mascots overlap.
+function stabilizeMascotOverlapOrder(movedWindow) {
+  const frontWindow = getMascotWindowById(OVERLAP_FRONT_MASCOT_ID);
+  const otherWindow = getMascotWindows().find((targetWindow) => targetWindow !== frontWindow);
+
+  if (!frontWindow || !otherWindow) {
+    return;
+  }
+
+  if (!doWindowBoundsOverlap(frontWindow.getBounds(), otherWindow.getBounds())) {
+    return;
+  }
+
+  if (movedWindow !== frontWindow && typeof frontWindow.moveTop === 'function') {
+    frontWindow.moveTop();
+  }
 }
 
 function getInitialMascotPosition(config, display = screen.getPrimaryDisplay()) {
@@ -573,6 +604,7 @@ app.whenReady().then(async () => {
   refreshAnimationPackCatalog();
   await createTray();
   ensureMascotWindows({ show: !startHidden });
+  sendToMascotWindows('set-mode', currentMode);
 
   app.on('activate', () => {
     if (getMascotWindows().length === 0) {
@@ -631,6 +663,7 @@ ipcMain.on('set-window-position', (event, payload, y) => {
 
     const safePosition = getSafeMascotWindowPosition(targetWindow, nextX, nextY);
     targetWindow.setPosition(safePosition.x, safePosition.y);
+    stabilizeMascotOverlapOrder(targetWindow);
   } catch (error) {
     console.error('Failed to handle mascot window position update', {
       mascotId: targetWindow && !targetWindow.isDestroyed()

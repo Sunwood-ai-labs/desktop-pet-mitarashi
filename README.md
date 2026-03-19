@@ -67,12 +67,23 @@ After `npm run build:win`, the main Windows outputs are:
 
 The unpacked executable is useful for debugging packaged behavior, while the portable `.exe` is the easiest file to share or run directly.
 
+If Windows startup points to an older portable build, you can repoint the `Run` entry to the current package version with:
+
+```bash
+npm run sync-startup:win
+```
+
+Use `npm run sync-startup:win:dry` to preview the registry change without writing it.
+
+When you run `npm run build:win`, the matching `postbuild:win` hook now refreshes the Windows startup entry automatically, but only if this app is already registered to start with Windows.
+
 ## Animation Packs
 
-You can extend the built-in `cat` and `penguin` animations by dropping a `pack.yaml` file plus image assets into an animation-pack folder.
+The shipped `cat` and `penguin` animations now come from bundled YAML animation packs, and you can extend or replace them by dropping your own `pack.yaml` file plus image assets into an animation-pack folder.
 
 Default discovery roots:
 
+- Bundled defaults: `./animation-packs/builtin/<pack>/pack.yaml`
 - Repo-local packs: `./animation-packs/<your-pack>/pack.yaml`
 - Per-user packs: Electron `userData/animation-packs`
 - Custom pack roots: `MITARASHI_ANIMATION_PACKS_DIR` (supports multiple paths separated by the platform delimiter)
@@ -105,6 +116,7 @@ Supported scope:
 - `interval_ms` / `switch_interval_ms`: random-switch timing
 
 All asset paths must stay inside the pack folder. Invalid packs are skipped with a warning in the Electron log. Restart the app after adding or changing a pack.
+Bundled packs load first, so custom packs can append to or replace the default cat and penguin animations.
 
 ## Documentation
 
